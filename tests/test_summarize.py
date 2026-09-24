@@ -126,5 +126,18 @@ class ListModelsTest(unittest.TestCase):
         self.assertEqual(names, ["gemini-flash-latest", "gemini-3-flash", "gemini-2.5-flash", "gemini-3-flash-lite"])
 
 
+
+
+class StripMarksTest(unittest.TestCase):
+    def test_validate_strips_asterisks_from_english_only(self):
+        s = copy.deepcopy(SUMMARY)
+        s["en"]["tldr"] = "About *low-resource* MT."
+        s["en"]["key_points"] = ["Uses *NusaX*"]
+        out = summarize.validate(s)
+        self.assertEqual(out["en"]["tldr"], "About low-resource MT.")
+        self.assertEqual(out["en"]["key_points"], ["Uses NusaX"])
+        self.assertIn("*low-resource*", out["id"]["tldr"])
+
+
 if __name__ == "__main__":
     unittest.main()

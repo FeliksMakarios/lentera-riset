@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 
 from . import http
@@ -17,7 +18,7 @@ author comment. Never invent numbers, datasets, languages or results that are no
 
 Produce two versions with the same content:
 
-1. "en": natural academic English.
+1. "en": natural academic English. Do not use asterisks or any markup in "en".
 2. "id": natural, formal Indonesian (bahasa Indonesia baku). Terminology rules for "id":
    - Keep established English technical terms in English and wrap them in single
      asterisks, e.g. *fine-tuning*, *benchmark*, *low-resource*, *tokenizer*,
@@ -25,6 +26,10 @@ Produce two versions with the same content:
      Indonesian NLP researchers would not recognise.
    - Use Indonesian only where the equivalent is well established in Indonesian
      academic writing (e.g. "terjemahan mesin", "korpus", "anotasi", "model bahasa").
+     Indonesian words, including loanwords already absorbed into Indonesian such as
+     "anotasi", "dialek", "evaluasi", "data", are NEVER wrapped in asterisks. Only
+     English terms are wrapped, and only the term itself, never Indonesian affixes
+     (write "data beranotasi", not "ber-*anotasi*").
    - Never translate names of models, datasets, benchmarks, metrics or languages
      (write "bahasa Jawa" for the language, but keep "NusaX", "BLEU", "IndoBERT").
 
@@ -37,7 +42,8 @@ For each version write:
 Also produce:
 - "glossary": up to six technical terms used in the Indonesian version that a
   master's student might not know. For each give "term" (exactly as written in the
-  text, without asterisks) and "explanation_id" (one plain Indonesian sentence).
+  text, without asterisks) and "explanation_id" (one plain Indonesian sentence,
+  where English terms follow the same asterisk rule as "id").
 - "languages_studied": names of natural languages the paper explicitly studies,
   in English (e.g. "Javanese", "Tagalog"). Empty list if none are named.
 
@@ -100,6 +106,10 @@ class RateLimited(Exception):
         self.daily = daily
 
 
+def _strip_marks(text: str) -> str:
+    return re.sub(r"\*([^*\n]+?)\*", r"\1", str(text))
+
+
 def validate(summary: dict) -> dict:
     """Pastikan struktur keluaran model lengkap; lempar ValueError jika tidak."""
     for lang in ("en", "id"):
@@ -112,6 +122,11 @@ def validate(summary: dict) -> dict:
         if not isinstance(points, list) or not points:
             raise ValueError(f"key_points '{lang}' kosong")
         section["key_points"] = [str(p).strip() for p in points if str(p).strip()]
+    # Versi Inggris tidak memerlukan penanda istilah; buang jika model tetap menambahkannya.
+    en = summary["en"]
+    en["tldr"] = _strip_marks(en["tldr"])
+    en["summary"] = _strip_marks(en["summary"])
+    en["key_points"] = [_strip_marks(p) for p in en["key_points"]]
     glossary = summary.get("glossary") or []
     summary["glossary"] = [
         {"term": str(g["term"]).strip().strip("*"), "explanation_id": str(g["explanation_id"]).strip()}

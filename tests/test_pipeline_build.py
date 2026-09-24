@@ -128,8 +128,6 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(build.date_id("2026-09-18T10:00:00Z"), "18 September 2026")
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class SignalMergeTest(unittest.TestCase):
@@ -145,3 +143,30 @@ class SignalMergeTest(unittest.TestCase):
             dt.now.return_value = NOW
             pipeline.update(CONFIG, fetch=False, summaries=False, log=lambda *_: None)
         self.assertEqual(papers["2609.01234"]["signals"], {"hugging_face": {"upvotes": 5}})
+
+
+class MarkupTest(unittest.TestCase):
+    def test_plain_strips_marks_and_escapes(self):
+        self.assertEqual(build.plain("a *large language model* <b>"), "a large language model &lt;b&gt;")
+
+    def test_english_column_has_no_italics_but_indonesian_does(self):
+        summary = copy.deepcopy(SUMMARY)
+        summary["en"]["summary"] = "Uses *large language models*."
+        html = build.summary_column(summary, "en", "English")
+        self.assertNotIn("<em>", html)
+        self.assertIn("Uses large language models.", html)
+        self.assertIn("<em>low-resource</em>", build.summary_column(summary, "id", "Bahasa Indonesia"))
+
+    def test_glossary_explanation_renders_italics(self):
+        papers = {}
+        pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
+        p = papers["2609.01234"]
+        p["summary"] = {**copy.deepcopy(SUMMARY), "model": "m"}
+        p["summary"]["glossary"] = [{"term": "fertility", "explanation_id": "Jumlah token per kata dari *tokenizer*."}]
+        html = build.paper_body(CONFIG, p)
+        self.assertIn("dari <em>tokenizer</em>.", html)
+        self.assertNotIn("*tokenizer*", html)
+
+
+if __name__ == "__main__":
+    unittest.main()

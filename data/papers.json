@@ -1,4 +1,240 @@
 {
- "papers": {},
- "updated_at": "2026-09-24T12:01:17+00:00"
+ "papers": {
+  "2609.27032": {
+   "abs_url": "https://arxiv.org/abs/2609.27032",
+   "abstract": "Faithfulness is a central concern in legal text summarization, which motivates extractive approaches that select verbatim content traceable to its source. Such methods typically rank paragraphs or other structural units in isolation, yet give little attention to consolidating evidence that is distributed across, and shares salience between, distant parts of a document. We introduce LexLattice, an extractive summarizer that reifies a legal act's hierarchy as a two-dimensional semantic lattice and consolidates over it with a masked 2D neural cellular automata before selection. LexLattice attains state-of-the-art ROUGE across all 24 languages of EUR-Lex-Sum in both multilingual and cross-lingual settings, surpassing instruction-tuned baselines with billions of parameters, despite concentrating all trainable capacity in a 1.8M parameter consolidator over a frozen multilingual encoder. A consolidator trained only on high-resource languages further transfers to unseen languages with near-lossless retention (0.99), indicating that the model operates on language-agnostic semantic geometry rather than surface form. Our results position explicit consolidation over document structure as a compact and traceable alternative to scale for multilingual legal summarization.",
+   "authors": [
+    "Sujay Uday Rittikar",
+    "Sheela Ramanna"
+   ],
+   "categories": [
+    "cs.CL",
+    "cs.LG",
+    "cs.NE"
+   ],
+   "comment": "",
+   "first_seen": "2026-09-24T12:09:52+00:00",
+   "id": "2609.27032",
+   "journal_ref": "",
+   "matched_keywords": {
+    "multilingual": [
+     "multilingual",
+     "cross-lingual"
+    ]
+   },
+   "pdf_url": "https://arxiv.org/pdf/2609.27032",
+   "primary_category": "cs.CL",
+   "published": "2026-09-24T04:00:00Z",
+   "relevance": 2.25,
+   "score": 2.6895,
+   "signals": {
+    "github": {
+     "name": "InsomaniacElf/sg-tamil-tts-resources-",
+     "repos": 1,
+     "stars": 1,
+     "url": "https://github.com/InsomaniacElf/sg-tamil-tts-resources-"
+    },
+    "semantic_scholar": {
+     "citations": 0,
+     "influential": 0,
+     "url": "https://www.semanticscholar.org/paper/221956e587f33f01fa50f3286b0c09f19085ca62"
+    }
+   },
+   "summary": null,
+   "title": "LexLattice: Multilingual Extractive Summarization via Neural Cellular Automata on Document Hierarchies",
+   "topics": [
+    "multilingual"
+   ],
+   "updated": "2026-09-24T04:00:00Z",
+   "version": 1
+  },
+  "2609.27387": {
+   "abs_url": "https://arxiv.org/abs/2609.27387",
+   "abstract": "AraGenre is a shared task on hierarchical, definition-guided Arabic genre classification, motivated by the limited availability of annotated data in Arabic and other low-resource languages. Systems assign each Arabic text segment both a broad communicative genre and a fine-grained specific genre. The released training and development sets contain limited, primarily synthetic and controlled examples, whereas the hidden final benchmark contains noisier naturally occurring text spanning Modern Standard Arabic, Classical Arabic, and multiple dialects. Participants received natural-language definitions for 74 previously unseen specific genres, creating a zero-shot label generalisation setting in which systems had to infer class semantics rather than memorise fixed label-feature associations. The task attracted 46 registrations and 373 submissions, with 17 teams completing the final evaluation. Thakaa ranked first with a Hierarchical Macro F1 of 0.7352, followed by HoangPhong (HP) with 0.7169 and NAMAA with 0.7013. The results show strong broad-genre recognition but a substantial gap in fine-grained classification under linguistic and domain variation.",
+   "authors": [
+    "Mo El-Haj",
+    "Saad Ezzini",
+    "Shadi Abudalfa",
+    "Mustafa Jarrar",
+    "Nguyen Minh Chi",
+    "Nguyen Minh Quan"
+   ],
+   "categories": [
+    "cs.CL"
+   ],
+   "comment": "",
+   "first_seen": "2026-09-24T12:09:52+00:00",
+   "id": "2609.27387",
+   "journal_ref": "",
+   "matched_keywords": {
+    "low-resource": [
+     "low-resource",
+     "low resource"
+    ],
+    "multilingual": [
+     "dialects"
+    ]
+   },
+   "pdf_url": "https://arxiv.org/pdf/2609.27387",
+   "primary_category": "cs.CL",
+   "published": "2026-09-24T04:00:00Z",
+   "relevance": 4.75,
+   "score": 7.9829,
+   "signals": {
+    "github": {
+     "name": "Tavish9/awesome-daily-AI-arxiv",
+     "repos": 2,
+     "stars": 122,
+     "url": "https://github.com/Tavish9/awesome-daily-AI-arxiv"
+    },
+    "semantic_scholar": {
+     "citations": 0,
+     "influential": 0,
+     "url": "https://www.semanticscholar.org/paper/f45b3ccc50f6588779852ba02adcf0bab5a4a2e1"
+    }
+   },
+   "summary": null,
+   "title": "AraGenre 2026: A Hierarchical Definition-Guided Arabic Genre Classification Shared Task",
+   "topics": [
+    "low-resource",
+    "multilingual"
+   ],
+   "updated": "2026-09-24T04:00:00Z",
+   "version": 1
+  },
+  "2609.27758": {
+   "abs_url": "https://arxiv.org/abs/2609.27758",
+   "abstract": "Safety alignment in large language models is trained primarily in English, and recent work reports that the underlying harmfulness representation survives translation: English-trained probes separate harmful from harmless prompts almost as well in low-resource languages as in English. This has been taken as evidence that cross-lingual refusal failures mainly reflect calibration rather than representation quality. We show that this conclusion depends on the choice of negative examples. Across nine languages spanning three resource tiers, we replicate near-perfect transfer (AUROC > 0.98) when harmless prompts come from an unrelated distribution (easy negatives). With XSTest contrast prompts, which are benign but surface-similar to harmful requests (hard negatives), transfer collapses in low-resource languages while remaining largely stable in high-resource languages. On Qwen2.5-7B-Instruct, mean AUROC drop increases from 0.003 in English to 0.017 in high-resource, 0.042 in mid-resource, and 0.276 in low-resource languages. The pattern replicates on Aya Expanse. Back-translation chrF controls and a matched-chrF comparison across three languages reduce the likelihood that translation quality explains the effect. The collapse remains after controlling for chrF (partial r = 0.70, p = 0.03). Tokenizer fertility correlates with the collapse and explains part of the resource-tier effect, but not all of it. The results show that easy-negative transfer can coexist with substantial degradation under hard negatives. Easy-negative evaluation alone therefore cannot establish that the harmfulness representation survives translation.",
+   "authors": [
+    "Paras Balani",
+    "Subhrakanta Panda"
+   ],
+   "categories": [
+    "cs.CL",
+    "cs.AI"
+   ],
+   "comment": "",
+   "first_seen": "2026-09-24T12:09:52+00:00",
+   "id": "2609.27758",
+   "journal_ref": "",
+   "matched_keywords": {
+    "low-resource": [
+     "low-resource",
+     "low resource"
+    ],
+    "multilingual": [
+     "cross-lingual"
+    ]
+   },
+   "pdf_url": "https://arxiv.org/pdf/2609.27758",
+   "primary_category": "cs.CL",
+   "published": "2026-09-24T04:00:00Z",
+   "relevance": 5.5,
+   "score": 8.7148,
+   "signals": {
+    "github": {
+     "name": "Tavish9/awesome-daily-AI-arxiv",
+     "repos": 1,
+     "stars": 121,
+     "url": "https://github.com/Tavish9/awesome-daily-AI-arxiv"
+    }
+   },
+   "summary": null,
+   "title": "Hard Negatives Reveal What Easy Negatives Hide: Cross-Lingual Harmfulness Representations Degrade with Resource Tier Under Hard Negatives",
+   "topics": [
+    "low-resource",
+    "multilingual"
+   ],
+   "updated": "2026-09-24T04:00:00Z",
+   "version": 1
+  },
+  "2609.27811": {
+   "abs_url": "https://arxiv.org/abs/2609.27811",
+   "abstract": "Online platforms have become arenas for the public contestation of climate change, shaping how scientific knowledge, denial, and uncertainty are expressed and disputed. Yet longitudinal evidence remains limited for YouTube, especially for Portuguese-language discourse. Addressing this gap, we characterize how climate stances are expressed and contested over time in a large corpus of Portuguese-language YouTube comments retrieved through Brazil-oriented climate-related searches. To support this analysis in a noisy, imbalanced, and low-resource setting, we collect more than 240,000 comments posted between 2014 and 2024 and formulate stance detection as a three-way classification task (Believer, Denier, and Inconclusive). We operationalize stance attribution through a scalable self-training pipeline based on Llama 3.1, using Low-Rank Adaptation (LoRA) and hybrid instance selection to expand the training set with high-confidence pseudo-labeled examples while preserving class diversity. This approach improves coverage and class balance for minority and rhetorically complex classes, enabling large-scale stance attribution without extensive manual annotation. Our results show that polarisation is marked by interactional asymmetries: denialist comments are less prevalent, but they are associated with a comparatively higher share of cross-stance contestation, while pro-consensus discourse is more strongly reinforced within stance-homogeneous threads.",
+   "authors": [
+    "Daniel Morais",
+    "Diego H. M. Magalhaes",
+    "Gabriel H. Silva",
+    "Andrea Failla",
+    "Valeria de C. Santos",
+    "Helen C. S. C. Lima",
+    "Carlos H. G. Ferreira"
+   ],
+   "categories": [
+    "cs.SI",
+    "cs.CL",
+    "cs.CY"
+   ],
+   "comment": "",
+   "first_seen": "2026-09-24T12:09:52+00:00",
+   "id": "2609.27811",
+   "journal_ref": "",
+   "matched_keywords": {
+    "low-resource": [
+     "low-resource",
+     "low resource"
+    ]
+   },
+   "pdf_url": "https://arxiv.org/pdf/2609.27811",
+   "primary_category": "cs.SI",
+   "published": "2026-09-24T04:00:00Z",
+   "relevance": 4.0,
+   "score": 3.9332,
+   "signals": {},
+   "summary": null,
+   "title": "A Decade of Climate Polarization on Brazilian YouTube using Language Models",
+   "topics": [
+    "low-resource"
+   ],
+   "updated": "2026-09-24T04:00:00Z",
+   "version": 1
+  },
+  "2609.27814": {
+   "abs_url": "https://arxiv.org/abs/2609.27814",
+   "abstract": "In statutory question answering, every claim must be traceable to evidence, not merely relevant, since unverifiable labour-rights answers carry serious legal consequences. Current systems fall short: single-pass RAG cannot detect insufficient evidence, while multi-agent legal-debate systems treat grounding as a prompting convention, letting agents cite unretrieved evidence. To address this gap, we introduce LabourCrew, a multi-agent RAG framework built around three grounding mechanisms: StatuteGraph, a graph index that explicitly links chapter, section, proviso, and cross-reference structure rather than fixed-length spans; an Evidence Exchange Protocol that confines advocates and an interpreter to an evidence ledger, making citation to unretrieved text impossible, while a fault-tolerant supervisor board runs advocates in parallel so individual failures degrade rather than crash the system; and a Calibrated Trust Gate that replaces categorical accept/reject decisions with a trust score, thresholded via conformal risk control for a distribution-free bound on the false-accept rate. We evaluate on LabourActQA, a 500-item Bangla question set from the Bangladesh Labour Act, 2006, spanning seven reasoning categories and three difficulty tiers. The framework drives the empirical false-accept rate to 0.081, within the target level ($\\alpha = 0.10$), achieves the highest Answer Relevancy among HyDE RAG, Graph-RAG, and Hierarchical RAG (0.862 $>$ 0.839, 0.815, 0.828), and degrades gradually rather than catastrophically as question difficulty increases. These results show that calibrated abstention, not retrieval quality alone, is what makes legal question answering auditable in low-resource statutory domains.",
+   "authors": [
+    "Fatema Tuj Johora Faria",
+    "Mukaffi Bin Moin",
+    "Jubayer Al Mahmud",
+    "M. F. Mridha",
+    "Md. Alam Hossain"
+   ],
+   "categories": [
+    "cs.CL",
+    "cs.AI",
+    "cs.IR"
+   ],
+   "comment": "",
+   "first_seen": "2026-09-24T12:09:52+00:00",
+   "id": "2609.27814",
+   "journal_ref": "",
+   "matched_keywords": {
+    "low-resource": [
+     "low-resource",
+     "low resource"
+    ]
+   },
+   "pdf_url": "https://arxiv.org/pdf/2609.27814",
+   "primary_category": "cs.CL",
+   "published": "2026-09-24T04:00:00Z",
+   "relevance": 4.0,
+   "score": 5.5837,
+   "signals": {
+    "github": {
+     "name": "Aaron617/agent-arXiv-daily",
+     "repos": 1,
+     "stars": 10,
+     "url": "https://github.com/Aaron617/agent-arXiv-daily"
+    }
+   },
+   "summary": null,
+   "title": "LabourCrew: A Multi-Agent RAG Framework for Trustworthy Adversarial Deliberation and Statutory Reasoning over Labour Law",
+   "topics": [
+    "low-resource"
+   ],
+   "updated": "2026-09-24T04:00:00Z",
+   "version": 1
+  }
+ },
+ "updated_at": "2026-09-24T12:15:10+00:00"
 }

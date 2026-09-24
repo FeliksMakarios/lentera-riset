@@ -12,4 +12,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s tests -t .
+      - run: node --test worker/index.test.mjs
       - run: python -m lentera build --out _site

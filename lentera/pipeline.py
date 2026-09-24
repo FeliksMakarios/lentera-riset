@@ -7,7 +7,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-from . import acl, arxiv, fulltext, openalex, rank, relevance, signals, store
+from . import acl, arxiv, embeddings, fulltext, openalex, rank, relevance, signals, store
 from .config import Config
 from .summarize import SUMMARY_VERSION, ModelBusy, QuotaExceeded, Summarizer
 
@@ -157,7 +157,7 @@ def fetch_all(config: Config, papers: dict, sources_state: dict, now: datetime, 
     log(f"  Total tersimpan: {len(papers)} makalah")
 
 
-def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, log=print) -> dict:
+def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, vectors=True, log=print) -> dict:
     data = store.load()
     papers = data["papers"]
     now = datetime.now(timezone.utc)
@@ -195,4 +195,6 @@ def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, 
             log("GEMINI_API_KEY tidak diisi, langkah ringkasan dilewati")
 
     store.save(data)
+    if vectors:
+        embeddings.run(config, papers, log=log)
     return data

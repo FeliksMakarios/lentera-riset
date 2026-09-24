@@ -75,7 +75,8 @@ a:hover { text-decoration-thickness: 2px; }
   background: radial-gradient(circle at 50% 40%, #fde68a 0 25%, var(--accent) 60%, transparent 62%);
   box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent);
 }
-.site-header nav { display: flex; gap: 18px; }
+.site-header nav { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+@media (max-width: 420px) { .site-header nav { gap: 4px 14px; } }
 .site-header nav a { color: var(--muted); text-decoration: none; font-size: 0.95rem; }
 .site-header nav a:hover { color: var(--text); }
 
@@ -169,3 +170,30 @@ a:hover { text-decoration-thickness: 2px; }
 .prose { max-width: 70ch; padding-top: 24px; }
 .prose h1 { font-family: var(--serif); }
 .prose li { margin-bottom: 6px; }
+
+/* Chip yang berupa tautan (topik dan bahasa) */
+a.chip { text-decoration: none; }
+a.chip:hover { text-decoration: underline; }
+.chip-count { opacity: 0.7; font-size: 0.72rem; margin-left: 2px; }
+.chip-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-lang { font-size: 0.85rem; padding: 3px 11px; }
+
+/* Halaman topik dan bahasa */
+.hub { list-style: none; padding: 0; margin: 16px 0 0; display: grid; gap: 12px; }
+.hub-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+.hub-item a { font-size: 1.05rem; }
+.hub-count { color: var(--muted); font-size: 0.85rem; margin-left: 8px; }
+.hub-item .note { margin: 4px 0 0; }
+.lang-group h2 { font-size: 1.1rem; margin: 28px 0 12px; }
+
+/* Pencarian */
+.search-form { align-items: stretch; }
+.button-primary { background: var(--accent); border-color: var(--accent); color: #fff; font: inherit; font-size: 0.95rem; padding: 7px 16px; cursor: pointer; }
+.button-primary:hover { color: #fff; filter: brightness(1.08); }
+#semantic-link { white-space: nowrap; }
+.match { margin-left: auto; font-weight: 600; color: var(--accent); }
+
+/* Makalah serupa */
+.similar ul { padding-left: 20px; }
+.similar li { margin-bottom: 8px; }
+.similar li .note { display: block; }

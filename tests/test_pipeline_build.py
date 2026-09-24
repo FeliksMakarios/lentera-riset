@@ -112,13 +112,15 @@ class BuildTest(unittest.TestCase):
             p["summary"] = {**copy.deepcopy(SUMMARY), "model": "fake-model"}
             p["summary"]["glossary"][0]["term"] = "benchmark"
         tmp = Path(tempfile.mkdtemp())
-        build.build_site(CONFIG, tmp / "site", {"updated_at": "2026-09-20T00:00:00+00:00", "papers": papers})
+        build.build_site(CONFIG, tmp / "site", {"updated_at": "2026-09-20T00:00:00+00:00", "papers": papers}, vectors={})
         return tmp / "site"
 
     def test_builds_all_pages(self):
         out = self.build(with_summary=True)
         for rel in ["index.html", "tentang.html", "feed.xml", "assets/style.css", "assets/app.js",
-                    "papers/2609.01234.html", ".nojekyll"]:
+                    "papers/2609.01234.html", ".nojekyll", "cari.html", "search-index.json",
+                    "assets/search.js", "topik/index.html", "topik/indonesia.html",
+                    "bahasa/index.html", "bahasa/javanese.html", "bahasa/sundanese.html"]:
             self.assertTrue((out / rel).exists(), rel)
         self.assertFalse((out / "papers/2609.05555.html").exists())
 
@@ -142,7 +144,7 @@ class BuildTest(unittest.TestCase):
         pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
         papers["2609.01234"]["title"] = "<script>alert(1)</script> Javanese"
         tmp = Path(tempfile.mkdtemp())
-        build.build_site(CONFIG, tmp / "s", {"updated_at": None, "papers": papers})
+        build.build_site(CONFIG, tmp / "s", {"updated_at": None, "papers": papers}, vectors={})
         html = (tmp / "s" / "index.html").read_text()
         self.assertNotIn("<script>alert(1)", html)
 
@@ -173,7 +175,7 @@ class SignalWindowTest(unittest.TestCase):
              mock.patch("lentera.store.save"), \
              mock.patch("lentera.pipeline.datetime") as dt:
             dt.now.return_value = NOW
-            pipeline.update(CONFIG, fetch=False, summaries=False, log=lambda *_: None)
+            pipeline.update(CONFIG, fetch=False, summaries=False, vectors=False, log=lambda *_: None)
         self.assertEqual(seen, ["2609.01234"])
 
 
@@ -188,7 +190,7 @@ class SignalMergeTest(unittest.TestCase):
              mock.patch("lentera.store.save"), \
              mock.patch("lentera.pipeline.datetime") as dt:
             dt.now.return_value = NOW
-            pipeline.update(CONFIG, fetch=False, summaries=False, log=lambda *_: None)
+            pipeline.update(CONFIG, fetch=False, summaries=False, vectors=False, log=lambda *_: None)
         self.assertEqual(papers["2609.01234"]["signals"], {"hugging_face": {"upvotes": 5}})
 
 

@@ -1,0 +1,20 @@
+# Cloudflare Worker untuk pencarian semantik. Diterbitkan otomatis oleh
+# .github/workflows/worker.yml; lihat README bagian "Pencarian semantik".
+name = "lentera-riset"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[vars]
+# Harus sama dengan model dan dimensions di [embeddings] pada config/topics.toml.
+EMBED_MODEL = "gemini-embedding-001"
+EMBED_DIMENSIONS = "256"
+# Asal halaman yang boleh memakai Worker ini, dipisahkan koma.
+ALLOWED_ORIGINS = "https://feliksmakarios.github.io,http://localhost:8000,http://127.0.0.1:8000"
+
+# Batas 30 pencarian per menit untuk setiap alamat IP, supaya kuota Gemini tidak
+# dihabiskan oleh satu pengguna.
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }

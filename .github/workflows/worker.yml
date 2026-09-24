@@ -1,0 +1,59 @@
+name: Terbitkan Worker pencarian semantik
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - ".github/workflows/worker.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Uji Worker
+        run: node --test worker/index.test.mjs
+
+      - name: Periksa secret Cloudflare
+        id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN atau CLOUDFLARE_ACCOUNT_ID belum diisi, Worker tidak diterbitkan. Lihat README bagian Pencarian semantik."
+          fi
+
+      - name: Terbitkan ke Cloudflare
+        id: deploy
+        if: steps.check.outputs.skip != 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          # Versi 4 diperlukan untuk batas permintaan per IP ([[ratelimits]]).
+          wranglerVersion: "4"
+          # Kunci Gemini disimpan sebagai secret Worker, tidak ikut ke kode.
+          secrets: |
+            GEMINI_API_KEY
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Tampilkan alamat Worker
+        if: steps.check.outputs.skip != 'true'
+        env:
+          URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          echo "Alamat Worker: $URL"
+          {
+            echo "### Worker pencarian semantik sudah terbit"
+            echo ""
+            echo "Alamat: \`$URL\`"
+            echo ""
+            echo "Simpan alamat ini sebagai variabel repositori \`WORKER_URL\` (Settings > Secrets and variables > Actions > Variables), lalu jalankan ulang alur kerja *Perbarui data dan terbitkan situs*."
+          } >> "$GITHUB_STEP_SUMMARY"

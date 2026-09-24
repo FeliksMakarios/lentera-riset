@@ -39,6 +39,26 @@ max_files_per_run = 150
 enabled = true
 lookback_days = 60
 max_results_per_topic = 200
+# OpenAlex mencakup semua bidang ilmu, jadi makalahnya wajib memuat istilah NLP
+# di judul atau abstrak: minimal satu istilah kuat, atau dua istilah lemah.
+# Tanpa ini, makalah pendidikan, kedokteran, atau ekonomi yang sekadar menyebut
+# "Indonesian" atau "Malay" ikut masuk.
+nlp_terms = [
+  "natural language processing", "NLP", "language model", "LLM", "machine translation",
+  "speech recognition", "ASR", "text-to-speech", "speech synthesis", "speech translation",
+  "treebank", "tokenizer", "tokenization", "word embedding", "BERT", "IndoBERT", "mBERT",
+  "XLM-R", "RoBERTa", "sentiment analysis", "named entity recognition", "NER",
+  "part-of-speech", "POS tagging", "dependency parsing", "text classification",
+  "question answering", "summarization", "language identification", "code-switching",
+  "code-mixed", "transliteration", "lemmatization", "stemming", "stemmer", "hate speech",
+  "fake news detection", "word sense", "text mining", "computational linguistics",
+  "cross-lingual", "sign language translation", "spell checker", "text normalization",
+  "morphological analyzer",
+]
+nlp_weak_terms = [
+  "corpus", "corpora", "low-resource language", "chatbot", "spoken language",
+  "orthography", "dataset", "annotation", "multilingual",
+]
 
 [signals]
 # Sinyal keramaian hanya diperbarui untuk makalah yang terbit dalam rentang ini.

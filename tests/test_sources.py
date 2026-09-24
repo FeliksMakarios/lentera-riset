@@ -163,7 +163,7 @@ class OpenAlexTest(unittest.TestCase):
         self.assertIn('title_and_abstract.search:("low-resource language" OR ', f)
         self.assertIn("from_publication_date:2026-09-01", f)
         self.assertNotIn("from_created_date", f)
-        self.assertIn("topics.field.id:17", f)
+        self.assertIn("primary_topic.field.id:17", f)
 
     def test_skipped_without_key(self):
         with mock.patch.dict("os.environ", {}, clear=True):
@@ -187,6 +187,36 @@ class OpenAlexTest(unittest.TestCase):
         self.assertIn("api_key=secret-key", calls[0])
         self.assertFalse(any("secret-key" in line for line in logs))
         self.assertIn("checked_at", state)
+
+
+class NlpContextTest(unittest.TestCase):
+    def paper(self, title, abstract, source="openalex"):
+        return {"id": "x", "source": source, "title": title, "abstract": abstract}
+
+    def test_non_nlp_openalex_paper_scores_zero(self):
+        from lentera import relevance
+        p = self.paper("Media flashcard untuk kosakata Bahasa Indonesia",
+                       "Pembelajaran Bahasa Indonesia di sekolah dasar, low-resource language setting.")
+        self.assertFalse(relevance.has_nlp_context(CONFIG, p))
+        self.assertEqual(relevance.score_paper(CONFIG, p)["relevance"], 0)
+
+    def test_strong_term_passes(self):
+        from lentera import relevance
+        p = self.paper("Hate speech detection in Javanese", "We fine-tune IndoBERT on a new Javanese corpus.")
+        self.assertTrue(relevance.has_nlp_context(CONFIG, p))
+        self.assertGreater(relevance.score_paper(CONFIG, p)["relevance"], 0)
+
+    def test_two_weak_terms_pass_one_does_not(self):
+        from lentera import relevance
+        one = self.paper("Malay idioms", "A corpus study of Malay idioms.")
+        two = self.paper("Malay idioms", "We release a corpus and annotation guidelines for Malay.")
+        self.assertFalse(relevance.has_nlp_context(CONFIG, one))
+        self.assertTrue(relevance.has_nlp_context(CONFIG, two))
+
+    def test_other_sources_are_not_filtered(self):
+        from lentera import relevance
+        p = self.paper("Covert reciprocals in Indonesian", "A syntax study.", source="acl")
+        self.assertTrue(relevance.has_nlp_context(CONFIG, p))
 
 
 class OpenAlex429Test(unittest.TestCase):

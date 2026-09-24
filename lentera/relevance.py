@@ -48,6 +48,24 @@ def topic_matches(topic: Topic, title: str, abstract: str) -> tuple[list[str], f
     return matched, min(score, topic.weight * TOPIC_CAP_MULTIPLIER)
 
 
+def has_nlp_context(config: Config, paper: dict) -> bool:
+    """Untuk sumber lintas bidang (OpenAlex): apakah makalah ini benar-benar makalah NLP?
+
+    Lolos jika judul atau abstrak memuat minimal satu istilah kuat, atau dua istilah lemah.
+    Sumber lain (arXiv cs.CL, ACL Anthology) selalu lolos.
+    """
+    if paper.get("source") != "openalex":
+        return True
+    strong = config.openalex.get("nlp_terms") or []
+    weak = config.openalex.get("nlp_weak_terms") or []
+    if not strong and not weak:
+        return True
+    text = f"{paper.get('title', '')} {paper.get('abstract', '')}"
+    if any(_pattern(t).search(text) for t in strong):
+        return True
+    return sum(1 for t in weak if _pattern(t).search(text)) >= 2
+
+
 def score_paper(config: Config, paper: dict) -> dict:
     """Hitung relevansi dan kembalikan {'relevance', 'topics', 'matched_keywords'}.
 
@@ -66,6 +84,6 @@ def score_paper(config: Config, paper: dict) -> dict:
             matched_all[topic.id] = matched
             total += score
             has_core = has_core or topic.core
-    if not has_core:
+    if not has_core or not has_nlp_context(config, paper):
         total = 0.0
     return {"relevance": round(total, 3), "topics": topics, "matched_keywords": matched_all}

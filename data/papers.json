@@ -25,15 +25,9 @@
    "pdf_url": "https://arxiv.org/pdf/2609.27032",
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
-   "relevance": 2.25,
-   "score": 2.6895,
+   "relevance": 0.0,
+   "score": 0.0,
    "signals": {
-    "github": {
-     "name": "InsomaniacElf/sg-tamil-tts-resources-",
-     "repos": 1,
-     "stars": 1,
-     "url": "https://github.com/InsomaniacElf/sg-tamil-tts-resources-"
-    },
     "semantic_scholar": {
      "citations": 0,
      "influential": 0,
@@ -68,32 +62,75 @@
    "journal_ref": "",
    "matched_keywords": {
     "low-resource": [
-     "low-resource",
-     "low resource"
+     "low-resource language"
     ],
     "multilingual": [
-     "dialects"
+     "low-resource",
+     "dialect"
     ]
    },
    "pdf_url": "https://arxiv.org/pdf/2609.27387",
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
-   "relevance": 4.75,
-   "score": 7.9829,
+   "relevance": 3.5,
+   "score": 3.4337,
    "signals": {
-    "github": {
-     "name": "Tavish9/awesome-daily-AI-arxiv",
-     "repos": 2,
-     "stars": 122,
-     "url": "https://github.com/Tavish9/awesome-daily-AI-arxiv"
-    },
     "semantic_scholar": {
      "citations": 0,
      "influential": 0,
      "url": "https://www.semanticscholar.org/paper/f45b3ccc50f6588779852ba02adcf0bab5a4a2e1"
     }
    },
-   "summary": null,
+   "summary": {
+    "en": {
+     "key_points": [
+      "AraGenre evaluated hierarchical and definition-guided Arabic genre classification.",
+      "The setup tested zero-shot label generalisation using natural-language definitions for 74 unseen specific genres.",
+      "The evaluation included Modern Standard Arabic, Classical Arabic, and multiple dialects.",
+      "Thakaa ranked first among 17 participating teams with a Hierarchical Macro F1 of 0.7352."
+     ],
+     "summary": "Arabic text classification faces challenges due to limited annotated data, particularly across various dialects and linguistic registers. To address this, the AraGenre shared task challenged participants to perform hierarchical genre classification using natural-language definitions for unseen genres rather than relying on fixed label-feature memorisation.\n\nThe evaluation featured datasets containing synthetic training examples and a noisier natural test set spanning Modern Standard Arabic, Classical Arabic, and multiple dialects. Thakaa secured first place with a Hierarchical Macro F1 of 0.7352, demonstrating strong broad-genre recognition while revealing performance gaps in fine-grained classification.",
+     "tldr": "AraGenre 2026 is a shared task evaluating hierarchical, definition-guided Arabic genre classification in a zero-shot label generalisation setting."
+    },
+    "generated_at": "2026-09-24T13:21:23+00:00",
+    "glossary": [
+     {
+      "explanation_id": "Kompetisi bersama di antara para peneliti untuk menyelesaikan tugas NLP menggunakan set data standar yang sama.",
+      "term": "shared task"
+     },
+     {
+      "explanation_id": "Kemampuan model untuk mengenali dan menggeneralisasi label kelas baru tanpa pelatihan contoh sebelumnya.",
+      "term": "zero-shot label generalisation"
+     },
+     {
+      "explanation_id": "Metrik evaluasi yang menghitung rata-rata skor F1 secara hierarkis pada berbagai tingkat kategori.",
+      "term": "Hierarchical Macro F1"
+     },
+     {
+      "explanation_id": "Bentuk standar bahasa Arab yang digunakan secara luas dalam tulisan dan media formal modern.",
+      "term": "Modern Standard Arabic"
+     },
+     {
+      "explanation_id": "Bentuk historis bahasa Arab yang digunakan dalam teks-teks keagamaan dan sastra klasik.",
+      "term": "Classical Arabic"
+     }
+    ],
+    "id": {
+     "key_points": [
+      "AraGenre mengevaluasi klasifikasi genre bahasa Arab yang bersifat hierarkis dan dipandu definisi.",
+      "Pengaturan eksperimen menguji *zero-shot label generalisation* menggunakan definisi teks untuk 74 genre spesifik yang belum pernah dilihat.",
+      "Evaluasi mencakup *Modern Standard Arabic*, *Classical Arabic*, dan berbagai dialek bahasa Arab.",
+      "Tim Thakaa meraih peringkat pertama dari 17 tim yang menyelesaikan evaluasi akhir dengan skor *Hierarchical Macro F1* 0,7352."
+     ],
+     "summary": "Klasifikasi teks bahasa Arab menghadapi kendala akibat keterbatasan data ber-*anotasi*, terutama pada ragam dialek dan variasi linguistik. Untuk mengatasi hal tersebut, *shared task* AraGenre menantang peserta melakukan klasifikasi genre hierarkis menggunakan definisi bahasa alami untuk genre baru tanpa mengandalkan hafalan label.\n\nEvaluasi ini menggunakan set pelatihan sintetis serta set uji alami yang mencakup *Modern Standard Arabic*, *Classical Arabic*, dan berbagai dialek. Tim Thakaa menduduki peringkat pertama dengan *Hierarchical Macro F1* sebesar 0,7352, menunjukkan pengenalan genre luas yang kuat tetapi menyisakan celah pada klasifikasi tingkat lanjut.",
+     "tldr": "AraGenre 2026 adalah *shared task* untuk klasifikasi genre bahasa Arab berbasis definisi hierarkis dalam pengaturan *zero-shot label generalisation*."
+    },
+    "languages_studied": [
+     "Arabic"
+    ],
+    "model": "gemini-flash-lite-latest",
+    "source_hash": "6d6d54299452"
+   },
    "title": "AraGenre 2026: A Hierarchical Definition-Guided Arabic Genre Classification Shared Task",
    "topics": [
     "low-resource",
@@ -119,27 +156,77 @@
    "journal_ref": "",
    "matched_keywords": {
     "low-resource": [
-     "low-resource",
-     "low resource"
+     "low-resource language"
     ],
     "multilingual": [
+     "low-resource",
      "cross-lingual"
     ]
    },
    "pdf_url": "https://arxiv.org/pdf/2609.27758",
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
-   "relevance": 5.5,
-   "score": 8.7148,
+   "relevance": 4.25,
+   "score": 4.1695,
    "signals": {
-    "github": {
-     "name": "Tavish9/awesome-daily-AI-arxiv",
-     "repos": 1,
-     "stars": 121,
-     "url": "https://github.com/Tavish9/awesome-daily-AI-arxiv"
+    "semantic_scholar": {
+     "citations": 0,
+     "influential": 0,
+     "url": "https://www.semanticscholar.org/paper/7d2a26716c4f3a424cfae06e520ed325982440d8"
     }
    },
-   "summary": null,
+   "summary": {
+    "en": {
+     "key_points": [
+      "Prior research suggested near-perfect cross-lingual transfer of harmfulness representations using easy negatives.",
+      "Using hard negatives from XSTest reveals that transfer collapses in low-resource languages.",
+      "The performance drop worsens as language resource tiers decrease, demonstrated on Qwen2.5-7B-Instruct and Aya Expanse.",
+      "Controls for translation quality and tokenizer fertility indicate that these factors only partially explain the degradation."
+     ],
+     "summary": "Safety alignment in *large language models* is primarily trained in English, and previous studies suggested that harmfulness representations transfer well to low-resource languages based on evaluations using easy negatives. However, these findings depend heavily on the choice of negative examples.\n\nEvaluating across nine languages spanning three resource tiers using XSTest contrast prompts as hard negatives, this study demonstrates that cross-lingual transfer collapses in low-resource languages while remaining stable in high-resource languages. These findings show that easy-negative evaluations are insufficient to establish whether harmfulness representations truly survive translation.",
+     "tldr": "Safety alignment cross-lingual transfer in large language models relies heavily on negative examples, where hard negatives reveal significant representation degradation in low-resource languages."
+    },
+    "generated_at": "2026-09-24T13:18:58+00:00",
+    "glossary": [
+     {
+      "explanation_id": "Contoh negatif yang tampak serupa dengan permintaan berbahaya tetapi sebenarnya bersifat jinak.",
+      "term": "hard negatives"
+     },
+     {
+      "explanation_id": "Contoh negatif dari distribusi yang tidak berkaitan dan sangat mudah dibedakan dari data berbahaya.",
+      "term": "easy negatives"
+     },
+     {
+      "explanation_id": "Metode atau evaluasi yang melibatkan perpindahan atau penerapan antarbahasa.",
+      "term": "cross-lingual"
+     },
+     {
+      "explanation_id": "Metrik evaluasi yang mengukur area di bawah kurva karakteristik operasi penerima untuk performa klasifikasi.",
+      "term": "AUROC"
+     },
+     {
+      "explanation_id": "Ukuran seberapa banyak token yang dihasilkan oleh *tokenizer* untuk merepresentasikan satu kata atau teks tertentu.",
+      "term": "tokenizer fertility"
+     },
+     {
+      "explanation_id": "Proses menerjemahkan teks kembali ke bahasa asal untuk menguji kualitas atau konsistensi terjemahan.",
+      "term": "back-translation"
+     }
+    ],
+    "id": {
+     "key_points": [
+      "Penelitian sebelumnya melaporkan transfer lintas bahasa yang hampir sempurna menggunakan *easy negatives*.",
+      "Penggunaan *hard negatives* dari XSTest membuktikan bahwa transfer representasi runtuh pada bahasa *low-resource*.",
+      "Penurunan performa semakin parah pada tingkat sumber daya yang lebih rendah, seperti yang diuji pada model Qwen2.5-7B-Instruct dan Aya Expanse.",
+      "Faktor kualitas penerjemahan dan *tokenizer fertility* telah dikontrol dan terbukti hanya sebagian yang menjelaskan degradasi tersebut."
+     ],
+     "summary": "*Safety alignment* pada *large language model* umumnya dilatih dalam bahasa Inggris, dan penelitian sebelumnya melaporkan bahwa representasi kebahayaan dapat ditransfer dengan baik ke bahasa *low-resource*. Akan tetapi, kesimpulan ini sangat bergantung pada pemilihan contoh negatif yang digunakan dalam evaluasi.\n\nDengan menguji sembilan bahasa dari tiga tingkat sumber daya menggunakan *prompt* kontras dari XSTest sebagai *hard negatives*, studi ini menunjukkan bahwa transfer lintas bahasa mengalami kegagalan pada bahasa *low-resource* tetapi tetap stabil pada bahasa *high-resource*. Hasil ini membuktikan bahwa evaluasi menggunakan *easy negatives* saja tidak cukup untuk menyimpulkan bahwa representasi kebahayaan bertahan dengan baik setelah penerjemahan.",
+     "tldr": "*Safety alignment* pada *large language model* menunjukkan degradasi representasi bahaya yang signifikan pada bahasa *low-resource* ketika diuji menggunakan *hard negatives*."
+    },
+    "languages_studied": [],
+    "model": "gemini-flash-lite-latest",
+    "source_hash": "359c5fd501b7"
+   },
    "title": "Hard Negatives Reveal What Easy Negatives Hide: Cross-Lingual Harmfulness Representations Degrade with Resource Tier Under Hard Negatives",
    "topics": [
     "low-resource",
@@ -170,21 +257,26 @@
    "id": "2609.27811",
    "journal_ref": "",
    "matched_keywords": {
-    "low-resource": [
-     "low-resource",
-     "low resource"
+    "multilingual": [
+     "low-resource"
     ]
    },
    "pdf_url": "https://arxiv.org/pdf/2609.27811",
    "primary_category": "cs.SI",
    "published": "2026-09-24T04:00:00Z",
-   "relevance": 4.0,
-   "score": 3.9332,
-   "signals": {},
+   "relevance": 0.0,
+   "score": 0.0,
+   "signals": {
+    "semantic_scholar": {
+     "citations": 0,
+     "influential": 0,
+     "url": "https://www.semanticscholar.org/paper/e3e4ac407176fc82f62f9334ac1cf3e1cbf2ccba"
+    }
+   },
    "summary": null,
    "title": "A Decade of Climate Polarization on Brazilian YouTube using Language Models",
    "topics": [
-    "low-resource"
+    "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
    "version": 1
@@ -209,32 +301,24 @@
    "id": "2609.27814",
    "journal_ref": "",
    "matched_keywords": {
-    "low-resource": [
-     "low-resource",
-     "low resource"
+    "multilingual": [
+     "low-resource"
     ]
    },
    "pdf_url": "https://arxiv.org/pdf/2609.27814",
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
-   "relevance": 4.0,
-   "score": 5.5837,
-   "signals": {
-    "github": {
-     "name": "Aaron617/agent-arXiv-daily",
-     "repos": 1,
-     "stars": 10,
-     "url": "https://github.com/Aaron617/agent-arXiv-daily"
-    }
-   },
+   "relevance": 0.0,
+   "score": 0.0,
+   "signals": {},
    "summary": null,
    "title": "LabourCrew: A Multi-Agent RAG Framework for Trustworthy Adversarial Deliberation and Statutory Reasoning over Labour Law",
    "topics": [
-    "low-resource"
+    "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
    "version": 1
   }
  },
- "updated_at": "2026-09-24T12:15:10+00:00"
+ "updated_at": "2026-09-24T13:21:23+00:00"
 }

@@ -9,16 +9,30 @@ import re
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 
 from . import http
 from .config import Config, Topic
 
 API_URL = "https://export.arxiv.org/api/query"
+RSS_URL = "https://rss.arxiv.org/rss/{categories}"
 NS = {
     "atom": "http://www.w3.org/2005/Atom",
     "arxiv": "http://arxiv.org/schemas/atom",
+    "dc": "http://purl.org/dc/elements/1.1/",
 }
 _ID_RE = re.compile(r"arxiv\.org/abs/(?P<id>.+?)(?:v(?P<ver>\d+))?$")
+_RSS_ID_RE = re.compile(r"(?P<id>\d{4}\.\d{4,5})(?:v(?P<ver>\d+))?")
+
+# Server arXiv menolak permintaan tanpa header yang lengkap, dan saat bebannya
+# tinggi menjawab 406 (bukan 429). Keduanya ditangani di sini.
+HEADERS = {
+    "Accept": "application/atom+xml, application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip",
+}
+THROTTLE_STATUSES = frozenset({403, 406, 429, 503})
 
 
 def build_query(topic: Topic, categories: list[str]) -> str:
@@ -80,23 +94,111 @@ def parse_feed(xml_bytes: bytes) -> list[dict]:
     return papers
 
 
+def _paper(pid: str, version: int, **fields) -> dict:
+    return {
+        "id": pid,
+        "version": version,
+        "abs_url": f"https://arxiv.org/abs/{pid}",
+        "pdf_url": fields.pop("pdf_url", "") or f"https://arxiv.org/pdf/{pid}",
+        **fields,
+    }
+
+
+def _split_authors(value: str) -> list[str]:
+    parts = re.split(r",\s*|\s+and\s+", value or "")
+    return [p.strip() for p in parts if p.strip()]
+
+
+def parse_rss(xml_bytes: bytes) -> list[dict]:
+    """Ubah umpan RSS harian arXiv menjadi daftar makalah.
+
+    Hanya makalah baru ("new") dan silang kategori ("cross") yang diambil.
+    Makalah revisi ("replace") dilewati karena tanggal terbit aslinya tidak diketahui.
+    """
+    root = ET.fromstring(xml_bytes)
+    papers = []
+    for item in root.iter("item"):
+        announce = _text(item.find("arxiv:announce_type", NS))
+        if announce and announce not in ("new", "cross"):
+            continue
+        ref = _text(item.find("guid")) or _text(item.find("link"))
+        match = _RSS_ID_RE.search(ref)
+        if not match:
+            continue
+        description = _text(item.find("description"))
+        abstract = description.split("Abstract:", 1)[1].strip() if "Abstract:" in description else description
+        categories = [_text(c) for c in item.findall("category") if _text(c)]
+        pub = _text(item.find("pubDate"))
+        published = (
+            parsedate_to_datetime(pub).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if pub else ""
+        )
+        if not published:
+            continue
+        papers.append(
+            _paper(
+                match.group("id"),
+                int(match.group("ver") or 1),
+                title=_text(item.find("title")),
+                abstract=abstract,
+                authors=_split_authors(_text(item.find("dc:creator", NS))),
+                published=published,
+                updated=published,
+                primary_category=categories[0] if categories else "",
+                categories=categories,
+                comment="",
+                journal_ref="",
+            )
+        )
+    return papers
+
+
+def fetch_rss(categories: list[str], log=print) -> list[dict]:
+    url = RSS_URL.format(categories="+".join(categories))
+    body = http.request(url, headers=HEADERS, timeout=60, retries=4, backoff=10,
+                        retry_statuses=THROTTLE_STATUSES, log=log)
+    return parse_rss(body)
+
+
 def fetch_candidates(config: Config, log=print) -> dict[str, dict]:
-    """Jalankan satu kueri per topik (yang `query = true`) dan gabungkan hasilnya."""
+    """Gabungkan dua sumber: umpan RSS harian dan kueri API per topik.
+
+    RSS berada di server terpisah yang jarang dibatasi, jadi makalah hari ini
+    tetap masuk walaupun API sedang menolak. API dipakai untuk mengisi makalah
+    beberapa minggu terakhir. Jika API terus menolak, kueri topik berikutnya
+    tidak dicoba lagi pada jalankan ini.
+    """
     categories = config.arxiv.get("categories", ["cs.CL"])
     max_results = int(config.arxiv.get("max_results_per_topic", 100))
     delay = float(config.arxiv.get("request_delay_seconds", 3.5))
+    retries = int(config.arxiv.get("api_retries", 5))
+    backoff = float(config.arxiv.get("api_backoff_seconds", 15))
     found: dict[str, dict] = {}
+
+    try:
+        rss_papers = fetch_rss(categories, log=log)
+        for p in rss_papers:
+            found.setdefault(p["id"], p)
+        log(f"  [arXiv RSS] {len(rss_papers)} makalah baru hari ini")
+    except Exception as exc:
+        log(f"  [arXiv RSS] gagal: {exc}")
+
     queried = [t for t in config.topics if t.query]
     for i, topic in enumerate(queried):
-        if i:
-            time.sleep(delay)
+        time.sleep(delay)
         url = query_url(build_query(topic, categories), max_results)
         try:
-            papers = parse_feed(http.request(url, timeout=60))
-        except Exception as exc:  # satu topik gagal tidak boleh menghentikan semuanya
-            log(f"  [arXiv] topik {topic.id} gagal: {exc}")
+            body = http.request(url, headers=HEADERS, timeout=60, retries=retries, backoff=backoff,
+                                retry_statuses=THROTTLE_STATUSES, log=log)
+            papers = parse_feed(body)
+        except http.HttpError as exc:
+            log(f"  [arXiv API] topik {topic.id} ditolak (HTTP {exc.status}); "
+                f"{len(queried) - i - 1} topik lain dilewati pada jalankan ini")
+            break
+        except Exception as exc:
+            log(f"  [arXiv API] topik {topic.id} gagal: {exc}")
             continue
-        log(f"  [arXiv] topik {topic.id}: {len(papers)} makalah")
+        log(f"  [arXiv API] topik {topic.id}: {len(papers)} makalah")
         for p in papers:
-            found.setdefault(p["id"], p)
+            # Data API lebih lengkap (komentar penulis, tanggal terbit asli), jadi menimpa data RSS.
+            found[p["id"]] = p
     return found

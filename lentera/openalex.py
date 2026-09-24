@@ -12,6 +12,7 @@ yang kebetulan menyebut kata seperti "Indonesian" tidak ikut masuk.
 
 from __future__ import annotations
 
+import json
 import os
 import time
 import urllib.parse
@@ -93,7 +94,41 @@ def to_paper(work: dict) -> dict | None:
     }
 
 
-def search(topic: Topic, since: str, api_key: str, max_results: int) -> list[dict]:
+class QuotaExhausted(Exception):
+    """OpenAlex menolak (429) dan tidak layak dicoba lagi pada jalankan ini."""
+
+
+def describe_429(exc: http.HttpError) -> str:
+    """Ringkas alasan penolakan OpenAlex dari isi respons dan header batasnya."""
+    try:
+        detail = json.loads(exc.body)
+        message = detail.get("message") or detail.get("error") or exc.body
+    except (ValueError, AttributeError):
+        message = exc.body
+    headers = {k.lower(): v for k, v in exc.headers.items()}
+    parts = [" ".join(str(message).split())[:300]]
+    for name in ("retry-after", "x-ratelimit-remaining", "x-ratelimit-limit", "x-ratelimit-credits-required"):
+        if name in headers:
+            parts.append(f"{name}={headers[name]}")
+    return "; ".join(parts)
+
+
+def get_page(url: str, sleep=time.sleep) -> dict:
+    """Ambil satu halaman hasil. 429 sementara (Retry-After pendek) dicoba ulang hingga dua kali."""
+    for attempt in range(3):
+        try:
+            return http.get_json(url, timeout=60)
+        except http.HttpError as exc:
+            if exc.status != 429:
+                raise
+            wait = float({k.lower(): v for k, v in exc.headers.items()}.get("retry-after") or 0)
+            if attempt == 2 or not 0 < wait <= 90:
+                raise QuotaExhausted(describe_429(exc)) from exc
+            sleep(wait + 1)
+    raise AssertionError("tidak terjangkau")
+
+
+def search(topic: Topic, since: str, api_key: str, max_results: int, sleep=time.sleep) -> list[dict]:
     results: list[dict] = []
     cursor = "*"
     while cursor and len(results) < max_results:
@@ -104,12 +139,24 @@ def search(topic: Topic, since: str, api_key: str, max_results: int) -> list[dic
             "cursor": cursor,
             "api_key": api_key,
         }
-        data = http.get_json(f"{API}?{urllib.parse.urlencode(params)}", timeout=60)
+        data = get_page(f"{API}?{urllib.parse.urlencode(params)}", sleep=sleep)
         results += data.get("results", [])
         cursor = (data.get("meta") or {}).get("next_cursor")
         if not data.get("results"):
             break
     return results[:max_results]
+
+
+def rate_limit_status(api_key: str) -> str:
+    """Sisa kredit harian menurut OpenAlex, untuk membantu mendiagnosis penolakan."""
+    try:
+        data = http.get_json(f"https://api.openalex.org/rate-limit?{urllib.parse.urlencode({'api_key': api_key})}", timeout=30)
+    except http.HttpError as exc:
+        return f"status kuota tidak bisa dibaca (HTTP {exc.status}: {' '.join(exc.body.split())[:200]})".replace(api_key, "***")
+    except Exception as exc:
+        return f"status kuota tidak bisa dibaca ({exc.__class__.__name__})"
+    data = {k: v for k, v in data.items() if k != "api_key"}
+    return "status kuota: " + json.dumps(data)[:400]
 
 
 def fetch_candidates(config: Config, state: dict, now: datetime | None = None, log=print) -> dict[str, dict]:
@@ -129,6 +176,11 @@ def fetch_candidates(config: Config, state: dict, now: datetime | None = None, l
     for topic in (t for t in config.topics if t.query):
         try:
             works = search(topic, since.date().isoformat(), api_key, max_results)
+        except QuotaExhausted as exc:
+            log(f"  [OpenAlex] ditolak (429): {str(exc).replace(api_key, '***')}")
+            log(f"  [OpenAlex] {rate_limit_status(api_key)}")
+            log("  [OpenAlex] topik lain dilewati pada jalankan ini")
+            break
         except Exception as exc:
             # Pesan galat memuat URL; kunci API jangan sampai tercetak di log.
             log(f"  [OpenAlex] topik {topic.id} gagal: {str(exc).replace(api_key, '***')[:200]}")

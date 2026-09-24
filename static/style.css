@@ -136,6 +136,24 @@ a:hover { text-decoration-thickness: 2px; }
 .summary-col ul { padding-left: 20px; margin: 0; }
 .summary-col em { font-style: italic; background: var(--accent-soft); padding: 0 2px; border-radius: 3px; }
 .tldr-box { font-weight: 600; margin-top: 0; }
+
+.tldr-card {
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; margin: 12px 0;
+}
+.tldr-card p { margin: 4px 0; }
+.tldr-card em { font-style: italic; }
+.tldr-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); }
+.tldr-card .tldr-en { color: var(--muted); font-size: 0.93rem; }
+
+.summary-section { margin: 22px 0 0; }
+.summary-section h3 { font-size: 1.05rem; margin: 0 0 8px; }
+.en-title { font-weight: 400; color: var(--muted); font-size: 0.85rem; margin-left: 6px; }
+.summary-section .summary-col p:last-child { margin-bottom: 0; }
+.col-label {
+  display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 4px;
+}
 .langs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .note { color: var(--muted); font-size: 0.85rem; }
 

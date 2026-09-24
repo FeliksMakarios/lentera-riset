@@ -90,6 +90,8 @@ def parse_feed(xml_bytes: bytes) -> list[dict]:
         papers.append(
             {
                 "id": match.group("id"),
+                "source": "arxiv",
+                "venue": "arXiv",
                 "version": int(match.group("ver") or 1),
                 "title": _text(entry.find("atom:title", NS)),
                 "abstract": _text(entry.find("atom:summary", NS)),
@@ -110,6 +112,8 @@ def parse_feed(xml_bytes: bytes) -> list[dict]:
 def _paper(pid: str, version: int, **fields) -> dict:
     return {
         "id": pid,
+        "source": "arxiv",
+        "venue": "arXiv",
         "version": version,
         "abs_url": f"https://arxiv.org/abs/{pid}",
         "pdf_url": fields.pop("pdf_url", "") or f"https://arxiv.org/pdf/{pid}",

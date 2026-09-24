@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from lentera import arxiv, build, pipeline
-from lentera.summarize import QuotaExceeded
+from lentera.summarize import QuotaExceeded, validate
 from tests.helpers import CONFIG, SUMMARY
 
 FIXTURE = Path(__file__).parent / "fixtures" / "arxiv_sample.xml"
@@ -22,11 +22,18 @@ class FakeSummarizer:
         self.calls = 0
         self.fail_after = fail_after
 
-    def summarize(self, paper):
+    def summarize(self, paper, pdf=None):
         if self.fail_after is not None and self.calls >= self.fail_after:
             raise QuotaExceeded("habis")
         self.calls += 1
-        return copy.deepcopy(SUMMARY), "fake-model"
+        self.pdfs = getattr(self, "pdfs", []) + [pdf]
+        result = validate(copy.deepcopy(SUMMARY))
+        result["source"] = "full_text" if pdf else "abstract"
+        return result, "fake-model"
+
+
+def no_pdf(*args, **kwargs):
+    return None
 
 
 class PipelineTest(unittest.TestCase):
@@ -53,7 +60,7 @@ class PipelineTest(unittest.TestCase):
 
     def test_summaries_are_added_with_source_hash(self):
         with mock.patch("time.sleep"):
-            done = pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None)
+            done = pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf)
         self.assertEqual(done, 1)
         s = self.papers["2609.01234"]["summary"]
         self.assertEqual(s["model"], "fake-model")
@@ -61,17 +68,17 @@ class PipelineTest(unittest.TestCase):
 
         # Jalankan lagi: tidak ada yang perlu diringkas.
         with mock.patch("time.sleep"):
-            self.assertEqual(pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None), 0)
+            self.assertEqual(pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf), 0)
 
     def test_changed_abstract_triggers_resummary(self):
         with mock.patch("time.sleep"):
-            pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None)
+            pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf)
             self.papers["2609.01234"]["abstract"] += " Revised."
-            self.assertEqual(pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None), 1)
+            self.assertEqual(pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf), 1)
 
     def test_quota_stops_gracefully(self):
         with mock.patch("time.sleep"):
-            done = pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(fail_after=0), log=lambda *_: None)
+            done = pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(fail_after=0), log=lambda *_: None, pdf_fetcher=no_pdf)
         self.assertEqual(done, 0)
         self.assertIsNone(self.papers["2609.01234"]["summary"])
 
@@ -151,11 +158,12 @@ class MarkupTest(unittest.TestCase):
 
     def test_english_column_has_no_italics_but_indonesian_does(self):
         summary = copy.deepcopy(SUMMARY)
-        summary["en"]["summary"] = "Uses *large language models*."
-        html = build.summary_column(summary, "en", "English")
-        self.assertNotIn("<em>", html)
+        summary["sections"]["method"]["en"] = "Uses *large language models*."
+        html = build.structured_summary(summary)
+        en_part = html.split('<div class="summary-col" lang="en">')[3]
+        self.assertNotIn("<em>", en_part.split("</div>")[0])
         self.assertIn("Uses large language models.", html)
-        self.assertIn("<em>low-resource</em>", build.summary_column(summary, "id", "Bahasa Indonesia"))
+        self.assertIn("<em>fine-tuning</em>", html)
 
     def test_glossary_explanation_renders_italics(self):
         papers = {}
@@ -166,6 +174,64 @@ class MarkupTest(unittest.TestCase):
         html = build.paper_body(CONFIG, p)
         self.assertIn("dari <em>tokenizer</em>.", html)
         self.assertNotIn("*tokenizer*", html)
+
+
+class StructuredSummaryTest(unittest.TestCase):
+    def paper_with_summary(self, source="full_text"):
+        papers = {}
+        pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
+        p = papers["2609.01234"]
+        p["summary"] = {**validate(copy.deepcopy(SUMMARY)), "model": "m", "source": source}
+        return p
+
+    def test_tldr_card_below_authors_and_six_sections(self):
+        html = build.paper_body(CONFIG, self.paper_with_summary())
+        self.assertLess(html.index('class="authors"'), html.index('class="tldr-card"'))
+        self.assertLess(html.index('class="tldr-card"'), html.index("<h2>Ringkasan</h2>"))
+        for _, title_id, title_en in build.SECTIONS:
+            self.assertIn(title_id, html)
+            self.assertIn(title_en, html)
+        self.assertIn("dari isi lengkap makalah (PDF)", html)
+        self.assertIn("Glosarium istilah", html)
+        self.assertIn("Mengapa makalah ini muncul", html)
+
+    def test_abstract_only_note(self):
+        html = build.paper_body(CONFIG, self.paper_with_summary(source="abstract"))
+        self.assertIn("hanya dari judul dan abstrak", html)
+
+    def test_legacy_summary_still_renders(self):
+        p = self.paper_with_summary()
+        p["summary"] = {
+            "id": {"tldr": "TLDR lama", "summary": "Ringkasan lama.", "key_points": ["a"]},
+            "en": {"tldr": "Old TLDR", "summary": "Old summary.", "key_points": ["a"]},
+            "glossary": [], "languages_studied": [], "model": "m",
+        }
+        html = build.paper_body(CONFIG, p)
+        self.assertIn("TLDR lama", html)
+        self.assertIn("Ringkasan lama.", html)
+        self.assertTrue(pipeline.needs_summary(p))
+
+    def test_acl_paper_page(self):
+        from datetime import date
+        from lentera import acl
+        paper = acl.parse_collection((FIXTURE.parent / "acl_sample.xml").read_bytes(), date(2026, 1, 1))[0]
+        paper.update(relevance=6, topics=["indonesia"], matched_keywords={"indonesia": ["Batak Toba"]},
+                     signals={}, summary=None)
+        html = build.paper_body(CONFIG, paper)
+        self.assertIn('href="https://aclanthology.org/2026.sealp-1.1/"', html)
+        self.assertIn(">ACL Anthology<", html)
+        self.assertEqual(build.slug(paper["id"]), "acl_2026.sealp-1.1")
+
+    def test_pdf_is_passed_to_summarizer(self):
+        papers = {}
+        pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
+        pipeline.rescore(CONFIG, papers, NOW)
+        fake = FakeSummarizer()
+        with mock.patch("time.sleep"):
+            pipeline.summarize_pending(CONFIG, papers, fake, log=lambda *_: None,
+                                       pdf_fetcher=lambda paper, max_mb, log: b"%PDF")
+        self.assertEqual(fake.pdfs, [b"%PDF"])
+        self.assertEqual(papers["2609.01234"]["summary"]["source"], "full_text")
 
 
 if __name__ == "__main__":

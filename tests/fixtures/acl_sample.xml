@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<collection id="2026.sealp">
+  <volume id="1" type="proceedings" ingest-date="2026-09-10">
+    <meta>
+      <booktitle>Proceedings of the Workshop on <fixed-case>S</fixed-case>outheast <fixed-case>A</fixed-case>sian Language Processing</booktitle>
+      <publisher>Association for Computational Linguistics</publisher>
+      <month>September</month>
+      <year>2026</year>
+      <venue>sealp</venue>
+      <venue>ws</venue>
+    </meta>
+    <frontmatter>
+      <pdf hash="11111111"/>
+    </frontmatter>
+    <paper id="1">
+      <title>Dependency Parsing for <fixed-case>B</fixed-case>atak <fixed-case>T</fixed-case>oba</title>
+      <author><first>Rina</first><last>Siregar</last></author>
+      <author><first>Budi</first><last>Nainggolan</last></author>
+      <pages>1-10</pages>
+      <abstract>We build the first Universal Dependencies treebank for Batak Toba, a low-resource language of Indonesia.</abstract>
+      <url hash="abcd1234">2026.sealp-1.1</url>
+      <doi>10.18653/v1/2026.sealp-1.1</doi>
+      <bibkey>siregar-2026-dependency</bibkey>
+    </paper>
+    <paper id="2">
+      <title>Efficient Transformers on Edge Devices</title>
+      <author><first>A.</first><last>Person</last></author>
+      <abstract>We compress transformers for phones.</abstract>
+      <url>https://example.org/external-2</url>
+    </paper>
+  </volume>
+  <volume id="2" type="proceedings" ingest-date="2025-01-15">
+    <meta>
+      <booktitle>Old Volume</booktitle>
+      <year>2025</year>
+    </meta>
+    <paper id="1">
+      <title>Old Javanese Paper</title>
+      <abstract>About Javanese.</abstract>
+      <url>2026.sealp-2.1</url>
+    </paper>
+  </volume>
+</collection>

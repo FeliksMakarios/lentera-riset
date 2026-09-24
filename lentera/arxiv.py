@@ -35,10 +35,23 @@ HEADERS = {
 THROTTLE_STATUSES = frozenset({403, 406, 429, 503})
 
 
+def _query_terms(keywords: list[str]) -> list[str]:
+    """Kata kunci untuk kueri arXiv, ditambah bentuk jamak untuk frasa berakhiran "language"."""
+    terms: list[str] = []
+    for kw in keywords:
+        variants = [kw, kw + "s"] if kw.lower().endswith("language") else [kw]
+        for v in variants:
+            if v not in terms:
+                terms.append(v)
+    return terms
+
+
 def build_query(topic: Topic, categories: list[str]) -> str:
     """Susun kueri arXiv: (kategori) AND (kata kunci topik)."""
     cats = " OR ".join(f"cat:{c}" for c in categories)
-    terms = " OR ".join(f'abs:"{kw}"' if " " in kw or "-" in kw else f"abs:{kw}" for kw in topic.keywords)
+    terms = " OR ".join(
+        f'abs:"{kw}"' if " " in kw or "-" in kw else f"abs:{kw}" for kw in _query_terms(topic.keywords)
+    )
     return f"({cats}) AND ({terms})"
 
 

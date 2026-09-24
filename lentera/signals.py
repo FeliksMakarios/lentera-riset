@@ -8,6 +8,7 @@ API-nya kini mewajibkan OAuth dan sering memblokir alamat IP layanan awan.
 from __future__ import annotations
 
 import os
+import re
 import time
 import urllib.parse
 
@@ -62,24 +63,37 @@ def semantic_scholar_batch(arxiv_ids: list[str]) -> dict[str, dict]:
     return out
 
 
+# Repositori pengumpul makalah (daftar harian, "awesome list") menyebut banyak ID
+# arXiv sekaligus, jadi bintangnya bukan sinyal untuk makalah tertentu.
+_AGGREGATOR_RE = re.compile(
+    r"arxiv|awesome|daily|weekly|digest|papers|reading[-_ ]?list|paper[-_ ]?list|feed|tracker|curated",
+    re.IGNORECASE,
+)
+
+
+def is_aggregator(repo: dict) -> bool:
+    text = f"{repo.get('full_name', '')} {repo.get('description') or ''}"
+    return bool(_AGGREGATOR_RE.search(text))
+
+
 def github_repos(arxiv_id: str) -> dict | None:
-    """Cari repositori publik yang README-nya menyebut ID arXiv makalah."""
+    """Cari repositori kode yang README-nya menyebut ID arXiv makalah (tanpa repositori pengumpul)."""
     headers = {"Accept": "application/vnd.github+json"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     q = urllib.parse.quote(f'"{arxiv_id}" in:readme')
     data = http.get_json(
-        f"https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page=5",
+        f"https://api.github.com/search/repositories?q={q}&sort=stars&order=desc&per_page=10",
         headers=headers,
     )
-    items = data.get("items", [])
+    items = [i for i in data.get("items", []) if not is_aggregator(i)]
     if not items:
         return None
     top = items[0]
     return {
         "stars": sum(int(i.get("stargazers_count") or 0) for i in items),
-        "repos": int(data.get("total_count") or len(items)),
+        "repos": len(items),
         "url": top.get("html_url", ""),
         "name": top.get("full_name", ""),
     }
@@ -115,9 +129,10 @@ def collect(arxiv_ids: list[str], log=print) -> dict[str, dict]:
                     log(f"  [{name}] terlalu banyak galat, sumber ini dilewati: {exc}")
                     break
                 continue
-            if value:
-                results[a][name] = value
+            # None berarti sumber berhasil dihubungi tetapi tidak ada sinyal,
+            # sehingga sinyal lama (jika ada) ikut dihapus saat digabung.
+            results[a][name] = value
             time.sleep(delay)
-        found = sum(1 for a in arxiv_ids if name in results[a])
+        found = sum(1 for a in arxiv_ids if results[a].get(name))
         log(f"  [{name}] {found} dari {len(arxiv_ids)} makalah punya sinyal")
     return results

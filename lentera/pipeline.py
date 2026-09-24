@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 from . import arxiv, rank, relevance, signals, store
 from .config import Config
-from .summarize import ModelUnavailable, QuotaExceeded, Summarizer
+from .summarize import ModelBusy, QuotaExceeded, Summarizer
 
 # Kolom metadata dari arXiv yang boleh ditimpa saat makalah diperbarui.
 ARXIV_FIELDS = (
@@ -58,20 +58,26 @@ def summarize_pending(config: Config, papers: dict, summarizer: Summarizer, log=
     limit = int(config.summaries.get("max_per_run", 25))
     delay = float(config.summaries.get("request_delay_seconds", 7))
     done = 0
-    for paper in pending[:limit]:
-        if done:
+    busy_streak = 0
+    for i, paper in enumerate(pending[:limit]):
+        if i:
             time.sleep(delay)
         try:
             result, model = summarizer.summarize(paper)
-        except QuotaExceeded:
-            log("  [Gemini] kuota habis, sisa makalah diringkas pada jalankan berikutnya")
+        except QuotaExceeded as exc:
+            log(f"  [Gemini] berhenti: {exc}. Sisa makalah diringkas pada jalankan berikutnya")
             break
-        except ModelUnavailable as exc:
-            log(f"  [Gemini] {exc}")
-            break
+        except ModelBusy as exc:
+            busy_streak += 1
+            log(f"  [Gemini] {paper['id']} dilewati: {exc}")
+            if busy_streak >= 2:
+                log("  [Gemini] layanan sedang sibuk, sisa makalah diringkas pada jalankan berikutnya")
+                break
+            continue
         except Exception as exc:
             log(f"  [Gemini] {paper['id']} gagal: {exc}")
             continue
+        busy_streak = 0
         result.update(
             model=model,
             source_hash=abstract_hash(paper),
@@ -100,11 +106,16 @@ def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, 
         recent = [pid for pid, p in papers.items() if rank.age_days(p, now) <= lookback]
         log(f"Mengumpulkan sinyal popularitas untuk {len(recent)} makalah...")
         for pid, sig in signals.collect(recent, log=log).items():
-            papers[pid].setdefault("signals", {}).update(sig)
+            current = papers[pid].setdefault("signals", {})
+            for source, value in sig.items():
+                if value is None:
+                    current.pop(source, None)
+                else:
+                    current[source] = value
         rescore(config, papers, now)
 
     if summaries:
-        summarizer = Summarizer(config.summaries.get("models", ["gemini-2.5-flash"]))
+        summarizer = Summarizer(config.summaries.get("models", ["gemini-flash-latest"]), log=log)
         if summarizer.enabled:
             log("Membuat ringkasan dwibahasa...")
             summarize_pending(config, papers, summarizer, log=log)

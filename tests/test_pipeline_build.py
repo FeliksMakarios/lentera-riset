@@ -130,3 +130,18 @@ class BuildTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SignalMergeTest(unittest.TestCase):
+    def test_empty_signal_clears_stale_value(self):
+        papers = {}
+        pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
+        papers["2609.01234"]["signals"] = {"github": {"stars": 120}, "hugging_face": {"upvotes": 3}}
+        fresh = {"2609.01234": {"github": None, "hugging_face": {"upvotes": 5}}}
+        with mock.patch("lentera.signals.collect", return_value=fresh), \
+             mock.patch("lentera.store.load", return_value={"papers": papers}), \
+             mock.patch("lentera.store.save"), \
+             mock.patch("lentera.pipeline.datetime") as dt:
+            dt.now.return_value = NOW
+            pipeline.update(CONFIG, fetch=False, summaries=False, log=lambda *_: None)
+        self.assertEqual(papers["2609.01234"]["signals"], {"hugging_face": {"upvotes": 5}})

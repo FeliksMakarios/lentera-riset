@@ -27,8 +27,30 @@ class RelevanceTest(unittest.TestCase):
         self.assertLess(r["relevance"], CONFIG.ranking["min_relevance"])
 
     def test_hyphen_and_space_are_equivalent(self):
-        r = relevance.score_paper(CONFIG, paper("x", "We target low resource settings."))
+        r = relevance.score_paper(CONFIG, paper("x", "We target low resource languages."))
         self.assertIn("low-resource", r["topics"])
+
+    def test_equivalent_keywords_count_once(self):
+        _, score = relevance.topic_matches(
+            CONFIG.topic("low-resource"), "x", "Work on low-resource languages and low resource languages."
+        )
+        self.assertEqual(score, CONFIG.topic("low-resource").weight)
+
+    def test_compute_sense_of_low_resource_is_not_relevant(self):
+        # "low-resource" untuk perangkat atau komputasi bukan topik situs ini.
+        r = relevance.score_paper(CONFIG, paper("Efficient agents", "A RAG framework for low-resource devices."))
+        self.assertLess(r["relevance"], CONFIG.ranking["min_relevance"])
+
+    def test_supporting_topic_alone_scores_zero(self):
+        r = relevance.score_paper(
+            CONFIG, paper("Multilingual cross-lingual summarization", "A multilingual, cross-lingual method.")
+        )
+        self.assertEqual(r["topics"], ["multilingual"])
+        self.assertEqual(r["relevance"], 0)
+
+    def test_local_language_model_is_not_relevant(self):
+        r = relevance.score_paper(CONFIG, paper("x", "We run local language models on phones."))
+        self.assertEqual(r["relevance"], 0)
 
     def test_whole_word_only(self):
         # "Malaysia" tidak boleh cocok dengan kata kunci "Malay".

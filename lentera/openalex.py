@@ -48,7 +48,8 @@ def build_filter(topic: Topic, since: str) -> str:
         f"title_and_abstract.search:({terms})",
         # from_created_date hanya untuk paket berbayar, jadi dipakai tanggal terbit.
         f"from_publication_date:{since}",
-        f"topics.field.id:{COMPUTER_SCIENCE_FIELD}",
+        # Topik utama harus ilmu komputer, bukan sekadar salah satu topik.
+        f"primary_topic.field.id:{COMPUTER_SCIENCE_FIELD}",
         "type:article",
     ])
 

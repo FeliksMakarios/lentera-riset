@@ -73,7 +73,7 @@
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
    "relevance": 3.5,
-   "score": 3.4337,
+   "score": 3.4323,
    "signals": {
     "semantic_scholar": {
      "citations": 0,
@@ -167,7 +167,7 @@
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
    "relevance": 4.25,
-   "score": 4.1695,
+   "score": 4.1678,
    "signals": {
     "semantic_scholar": {
      "citations": 0,
@@ -310,7 +310,13 @@
    "published": "2026-09-24T04:00:00Z",
    "relevance": 0.0,
    "score": 0.0,
-   "signals": {},
+   "signals": {
+    "semantic_scholar": {
+     "citations": 0,
+     "influential": 0,
+     "url": "https://www.semanticscholar.org/paper/fefea30e7cd3f1561a9f8179a67870975139b8f9"
+    }
+   },
    "summary": null,
    "title": "LabourCrew: A Multi-Agent RAG Framework for Trustworthy Adversarial Deliberation and Statutory Reasoning over Labour Law",
    "topics": [
@@ -320,5 +326,5 @@
    "version": 1
   }
  },
- "updated_at": "2026-09-24T13:21:23+00:00"
+ "updated_at": "2026-09-24T13:29:04+00:00"
 }

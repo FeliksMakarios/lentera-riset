@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
-from . import store
+from . import relevance, store
 from .config import ROOT, Config
 from .rank import parse_date
 
@@ -31,9 +31,14 @@ def inline(text: str) -> str:
     return re.sub(r"\*([^*\n]+?)\*", r"<em>\1</em>", esc(text or ""))
 
 
-def paragraphs(text: str) -> str:
+def plain(text: str) -> str:
+    """Escape HTML dan buang penanda *istilah* (untuk teks bahasa Inggris)."""
+    return esc(re.sub(r"\*([^*\n]+?)\*", r"\1", text or ""))
+
+
+def paragraphs(text: str, fmt=inline) -> str:
     parts = [p.strip() for p in re.split(r"\n\s*\n", text or "") if p.strip()]
-    return "".join(f"<p>{inline(p)}</p>" for p in parts)
+    return "".join(f"<p>{fmt(p)}</p>" for p in parts)
 
 
 def date_id(value: str) -> str:
@@ -129,7 +134,7 @@ def card(config: Config, paper: dict) -> str:
     if summary:
         tldr = (
             f'<p class="tldr" lang="id">{inline(summary["id"]["tldr"])}</p>'
-            f'<p class="tldr tldr-en" lang="en">{inline(summary["en"]["tldr"])}</p>'
+            f'<p class="tldr tldr-en" lang="en">{plain(summary["en"]["tldr"])}</p>'
         )
     else:
         abstract = paper["abstract"]
@@ -180,11 +185,12 @@ def index_body(config: Config, papers: list[dict]) -> str:
 
 def summary_column(summary: dict, lang: str, heading: str) -> str:
     part = summary[lang]
-    points = "".join(f"<li>{inline(p)}</li>" for p in part["key_points"])
+    fmt = inline if lang == "id" else plain
+    points = "".join(f"<li>{fmt(p)}</li>" for p in part["key_points"])
     return f"""<div class="summary-col" lang="{lang}">
   <h3>{heading}</h3>
-  <p class="tldr-box">{inline(part['tldr'])}</p>
-  {paragraphs(part['summary'])}
+  <p class="tldr-box">{fmt(part['tldr'])}</p>
+  {paragraphs(part['summary'], fmt)}
   <h4>{'Poin utama' if lang == 'id' else 'Key points'}</h4>
   <ul>{points}</ul>
 </div>"""
@@ -204,7 +210,7 @@ def paper_body(config: Config, paper: dict) -> str:
 
     if summary:
         glossary = "".join(
-            f"<dt>{esc(g['term'])}</dt><dd>{esc(g['explanation_id'])}</dd>" for g in summary.get("glossary", [])
+            f"<dt>{esc(g['term'])}</dt><dd>{inline(g['explanation_id'])}</dd>" for g in summary.get("glossary", [])
         )
         glossary_html = f'<section class="glossary"><h2>Glosarium istilah</h2><dl>{glossary}</dl></section>' if glossary else ""
         langs = summary.get("languages_studied") or []
@@ -315,7 +321,13 @@ def feed(config: Config, papers: list[dict], updated_at: str | None) -> str:
 # ---------------------------------------------------------------------------
 
 def select_papers(config: Config, papers: dict) -> list[dict]:
-    """Makalah yang tampil: relevan, maksimal N terbaru, diurutkan menurut skor."""
+    """Makalah yang tampil: relevan, maksimal N terbaru, diurutkan menurut skor.
+
+    Relevansi dihitung ulang dengan konfigurasi saat ini, jadi perubahan kata kunci
+    langsung berlaku tanpa menunggu pembaruan data berikutnya.
+    """
+    for paper in papers.values():
+        paper.update(relevance.score_paper(config, paper))
     min_rel = float(config.ranking.get("min_relevance", 2.0))
     limit = int(config.site.get("max_papers_on_index", 300))
     relevant = [p for p in papers.values() if p.get("relevance", 0) >= min_rel]

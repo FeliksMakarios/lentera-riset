@@ -1,0 +1,113 @@
+# Konfigurasi utama Lentera Riset.
+#
+# Untuk memperluas cakupan, cukup tambahkan blok [[topics]] baru atau
+# tambahkan kata kunci pada topik yang sudah ada. Tidak perlu mengubah kode.
+
+[site]
+title = "Lentera Riset"
+tagline = "Riset NLP bahasa berdaya sumber rendah dan bahasa Austronesia, diringkas dalam bahasa Inggris dan Indonesia."
+repo_url = "https://github.com/FeliksMakarios/lentera-riset"
+# Alamat situs setelah terbit, dipakai untuk tautan di RSS.
+site_url = "https://feliksmakarios.github.io/lentera-riset"
+# Jumlah makalah maksimum yang ditampilkan di halaman depan.
+max_papers_on_index = 300
+
+[arxiv]
+# Kategori arXiv yang dipantau.
+categories = ["cs.CL", "cs.AI", "cs.LG", "cs.SD", "eess.AS"]
+# Jumlah hasil per kueri topik (arXiv menyarankan tidak lebih dari 2000).
+max_results_per_topic = 100
+# Jeda antarpermintaan ke arXiv, dalam detik (aturan arXiv: minimal 3 detik).
+request_delay_seconds = 3.5
+# Makalah yang lebih tua dari ini tidak diambil lagi dan sinyalnya tidak diperbarui.
+lookback_days = 60
+
+[ranking]
+# Makalah baru disimpan jika skor relevansinya mencapai ambang ini.
+min_relevance = 2.0
+# Waktu paruh (hari) untuk penurunan skor berdasarkan umur makalah.
+half_life_days = 14
+
+[summaries]
+# Jumlah maksimum ringkasan baru per sekali jalan, supaya kuota gratis tidak habis.
+max_per_run = 25
+# Jeda antarpanggilan Gemini, dalam detik (kuota gratis dibatasi per menit).
+request_delay_seconds = 7
+# Model dicoba berurutan; model berikutnya dipakai jika model sebelumnya tidak tersedia.
+models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"]
+
+# ---------------------------------------------------------------------------
+# Topik. `weight` menentukan seberapa besar satu kata kunci menambah skor
+# relevansi. Kata kunci dicocokkan pada judul dan abstrak, tanpa membedakan
+# huruf besar dan kecil, dan harus berupa kata utuh.
+# `query = false` berarti kata kunci hanya dipakai untuk penilaian, tidak
+# untuk kueri ke arXiv (berguna untuk kata yang terlalu umum).
+# ---------------------------------------------------------------------------
+
+[[topics]]
+id = "indonesia"
+label_id = "Bahasa Indonesia dan bahasa daerah"
+label_en = "Indonesian and regional languages"
+weight = 3.0
+query = true
+keywords = [
+  "Indonesian", "Bahasa Indonesia", "Javanese", "Sundanese", "Balinese",
+  "Madurese", "Minangkabau", "Acehnese", "Buginese", "Banjarese", "Banjar",
+  "Batak", "Toba Batak", "Batak Toba", "Karo", "Mandailing", "Sasak",
+  "Makassarese", "Betawi", "Ngaju", "Lampung", "Nias", "Toraja",
+  "Gorontalo", "Rejang", "Dayak", "Ambonese", "Papuan Malay",
+  "IndoNLU", "IndoNLG", "IndoLEM", "IndoBERT", "NusaX", "NusaCrowd",
+  "NusaWrites", "NusaTranslation", "SEACrowd", "IndoNLP", "Cendol",
+]
+
+[[topics]]
+id = "austronesia"
+label_id = "Bahasa Austronesia lainnya"
+label_en = "Other Austronesian languages"
+weight = 2.5
+query = true
+keywords = [
+  "Austronesian", "Malayo-Polynesian", "Malay", "Tagalog", "Filipino",
+  "Cebuano", "Ilocano", "Hiligaynon", "Waray", "Bikol", "Kapampangan",
+  "Malagasy", "Maori", "Hawaiian", "Samoan", "Tongan", "Fijian", "Tetum",
+  "Chamorro", "Formosan", "Amis", "Atayal", "Paiwan", "Cham", "Bislama",
+  "Tok Pisin",
+]
+
+[[topics]]
+id = "sea"
+label_id = "Asia Tenggara"
+label_en = "Southeast Asia"
+weight = 1.5
+query = true
+keywords = [
+  "Southeast Asian", "Southeast Asia", "SEA languages", "SeaLLM", "SeaLLMs",
+  "SEA-LION", "Sailor", "Nusantara",
+]
+
+[[topics]]
+id = "low-resource"
+label_id = "Bahasa berdaya sumber rendah"
+label_en = "Low-resource languages"
+weight = 2.0
+query = true
+keywords = [
+  "low-resource", "low resource", "under-resourced", "underresourced",
+  "resource-poor", "resource-scarce", "extremely low-resource",
+  "endangered language", "endangered languages", "indigenous language",
+  "indigenous languages", "language documentation", "underrepresented languages",
+  "regional languages", "local languages", "minority languages",
+]
+
+[[topics]]
+id = "multilingual"
+label_id = "Multibahasa dan lintas bahasa"
+label_en = "Multilingual and cross-lingual"
+weight = 0.75
+query = false
+keywords = [
+  "multilingual", "cross-lingual", "crosslingual", "code-switching",
+  "code-mixed", "code-mixing", "transliteration", "language transfer",
+  "machine translation", "parallel corpus", "dialect", "dialects",
+  "Universal Dependencies", "treebank",
+]

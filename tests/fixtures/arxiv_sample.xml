@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom">
+  <title type="html">ArXiv Query</title>
+  <id>http://arxiv.org/api/example</id>
+  <updated>2026-09-20T00:00:00-04:00</updated>
+  <opensearch:totalResults>3</opensearch:totalResults>
+  <entry>
+    <id>http://arxiv.org/abs/2609.01234v2</id>
+    <updated>2026-09-19T10:00:00Z</updated>
+    <published>2026-09-18T10:00:00Z</published>
+    <title>Low-Resource Machine Translation for
+      Javanese and Sundanese</title>
+    <summary>We study machine translation for Javanese and Sundanese, two regional
+      languages of Indonesia, using NusaX as a benchmark.</summary>
+    <author><name>Siti Rahma</name></author>
+    <author><name>Budi Santoso</name></author>
+    <arxiv:comment>Accepted at a workshop</arxiv:comment>
+    <link href="http://arxiv.org/abs/2609.01234v2" rel="alternate" type="text/html"/>
+    <link title="pdf" href="http://arxiv.org/pdf/2609.01234v2" rel="related" type="application/pdf"/>
+    <arxiv:primary_category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.05555v1</id>
+    <updated>2026-09-17T10:00:00Z</updated>
+    <published>2026-09-17T10:00:00Z</published>
+    <title>Scaling Laws for Vision Transformers</title>
+    <summary>We study scaling of vision transformers on image classification.</summary>
+    <author><name>A. Researcher</name></author>
+    <link title="pdf" href="http://arxiv.org/pdf/2609.05555v1" rel="related" type="application/pdf"/>
+    <arxiv:primary_category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2609.07777v1</id>
+    <updated>2026-09-16T10:00:00Z</updated>
+    <published>2026-09-16T10:00:00Z</published>
+    <title>A Multilingual Benchmark for Reasoning</title>
+    <summary>We introduce a multilingual reasoning benchmark covering 40 languages.</summary>
+    <author><name>C. Author</name></author>
+    <arxiv:primary_category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+  </entry>
+</feed>

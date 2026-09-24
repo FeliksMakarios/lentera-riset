@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gzip
 import json
+import random
 import time
 import urllib.error
 import urllib.request
@@ -20,6 +22,14 @@ class HttpError(Exception):
         self.body = body
 
 
+def _retry_after(headers) -> float | None:
+    value = headers.get("Retry-After") if headers else None
+    try:
+        return float(value) if value else None
+    except ValueError:
+        return None
+
+
 def request(
     url: str,
     *,
@@ -29,28 +39,43 @@ def request(
     timeout: float = 30,
     retries: int = 3,
     backoff: float = 2.0,
+    retry_statuses: frozenset[int] = frozenset(),
+    log=None,
 ) -> bytes:
-    """Kirim permintaan dan kembalikan isi respons.
+    """Kirim permintaan dan kembalikan isi respons (sudah didekompresi jika gzip).
 
-    Percobaan ulang hanya dilakukan untuk galat jaringan dan status 5xx.
-    Status 4xx (termasuk 429) langsung dilempar agar pemanggil yang memutuskan.
+    Percobaan ulang dilakukan untuk galat jaringan, status 5xx, dan status di
+    `retry_statuses` (misalnya 406 atau 429 yang dipakai server untuk membatasi
+    permintaan). Jeda naik dua kali lipat setiap percobaan, ditambah sedikit acak.
+    Status 4xx lainnya langsung dilempar agar pemanggil yang memutuskan.
     """
     all_headers = {"User-Agent": USER_AGENT}
     all_headers.update(headers or {})
     last_error: Exception | None = None
     for attempt in range(retries):
         req = urllib.request.Request(url, data=data, headers=all_headers, method=method)
+        wait = backoff * (2**attempt)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.read()
+                body = resp.read()
+                if resp.headers.get("Content-Encoding", "").lower() == "gzip":
+                    body = gzip.decompress(body)
+                return body
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", "replace")
-            if exc.code < 500:
+            if exc.code < 500 and exc.code not in retry_statuses:
                 raise HttpError(exc.code, url, body) from exc
             last_error = HttpError(exc.code, url, body)
+            wait = max(wait, _retry_after(exc.headers) or 0)
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             last_error = exc
-        time.sleep(backoff * (2**attempt))
+        if attempt < retries - 1:
+            wait += random.uniform(0, backoff)
+            if log:
+                log(f"    percobaan {attempt + 1} gagal ({last_error.__class__.__name__}"
+                    f"{' ' + str(last_error.status) if isinstance(last_error, HttpError) else ''}),"
+                    f" mencoba lagi dalam {wait:.0f} detik")
+            time.sleep(wait)
     assert last_error is not None
     raise last_error
 

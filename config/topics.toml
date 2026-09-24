@@ -17,6 +17,9 @@ max_papers_on_index = 300
 categories = ["cs.CL", "cs.AI", "cs.LG", "cs.SD", "eess.AS"]
 # Jumlah hasil per kueri topik (arXiv menyarankan tidak lebih dari 2000).
 max_results_per_topic = 100
+# Percobaan ulang saat API arXiv menolak (406/429/503) dan jeda awalnya (detik), naik dua kali lipat.
+api_retries = 5
+api_backoff_seconds = 15
 # Jeda antarpermintaan ke arXiv, dalam detik (aturan arXiv: minimal 3 detik).
 request_delay_seconds = 3.5
 # Makalah yang lebih tua dari ini tidak diambil lagi dan sinyalnya tidak diperbarui.

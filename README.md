@@ -8,7 +8,7 @@ Situs: <https://feliksmakarios.github.io/lentera-riset/>
 
 ## Fitur tahap 1
 
-- Pengambilan makalah harian dari arXiv (cs.CL, cs.AI, cs.LG, cs.SD, eess.AS) berdasarkan kata kunci topik.
+- Pengambilan makalah harian dari arXiv (cs.CL, cs.AI, cs.LG, cs.SD, eess.AS) lewat dua jalur: umpan RSS harian untuk makalah hari ini, dan API pencarian per topik untuk makalah beberapa minggu terakhir.
 - Skor relevansi per topik: bahasa Indonesia dan daerah, Austronesia lainnya, Asia Tenggara, berdaya sumber rendah, serta multibahasa.
 - Sinyal keramaian dari Hugging Face Papers, Hacker News, GitHub, dan jumlah sitasi Semantic Scholar.
 - Ringkasan dwibahasa dari Gemini. Istilah teknis yang lazim dipertahankan dalam bahasa Inggris dan dicetak miring, disertai glosarium berbahasa Indonesia.
@@ -56,7 +56,7 @@ python -m http.server -d _site 8000            # buka http://localhost:8000
 ## Batasan kuota gratis
 
 - **Gemini**: kuota harian terbatas, jadi maksimal 25 ringkasan baru per hari (bisa diatur di `[summaries]`). Pada versi gratis, Google boleh memakai data permintaan untuk meningkatkan layanannya. Karena yang dikirim hanya judul dan abstrak makalah publik, hal ini tidak menjadi masalah.
-- **arXiv**: jeda minimal 3 detik antarpermintaan sudah diterapkan.
+- **arXiv**: jeda minimal 3 detik antarpermintaan sudah diterapkan. Saat bebannya tinggi, API arXiv kadang menolak dengan kode 406. Sistem akan mencoba ulang beberapa kali, dan jika tetap ditolak, makalah hari itu tetap masuk lewat umpan RSS.
 - **GitHub Actions dan Pages**: gratis tanpa batas untuk repositori publik.
 - **X (Twitter)** tidak dipakai karena API-nya berbayar. **Reddit** belum dipakai karena mewajibkan OAuth.
 

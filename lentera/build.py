@@ -12,6 +12,7 @@ from pathlib import Path
 from . import relevance, store
 from .config import ROOT, Config
 from .rank import parse_date
+from .summarize import SECTIONS
 
 STATIC_DIR = ROOT / "static"
 MONTHS_ID = [
@@ -53,7 +54,30 @@ def authors_short(authors: list[str], limit: int = 4) -> str:
 
 
 def slug(paper_id: str) -> str:
-    return paper_id.replace("/", "_")
+    return re.sub(r"[/:]", "_", paper_id)
+
+
+SOURCE_LABELS = {"arxiv": "arXiv", "acl": "ACL Anthology", "openalex": "DOI"}
+DATA_SOURCES = {"arxiv": "arXiv", "acl": "ACL Anthology", "openalex": "OpenAlex"}
+
+
+def source_label(paper: dict) -> str:
+    """Nama sumber untuk ditampilkan: arXiv, ACL Anthology, atau nama jurnal/konferensi."""
+    source = paper.get("source", "arxiv")
+    if source == "arxiv":
+        return "arXiv"
+    return paper.get("venue") or SOURCE_LABELS.get(source, source)
+
+
+def tldr_pair(summary: dict | None) -> tuple[str, str] | None:
+    """(TL;DR Indonesia, TL;DR Inggris), mendukung format ringkasan lama dan baru."""
+    if not summary:
+        return None
+    if isinstance(summary.get("tldr"), dict):
+        return summary["tldr"]["id"], summary["tldr"]["en"]
+    if isinstance(summary.get("id"), dict):
+        return summary["id"].get("tldr", ""), summary["en"].get("tldr", "")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +110,7 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
 </main>
 <footer class="site-footer">
   <div class="wrap">
-    <p>{updated} Metadata makalah dari <a href="https://arxiv.org">arXiv</a>. Thank you to arXiv for use of its open access interoperability.</p>
+    <p>{updated} Metadata makalah dari <a href="https://arxiv.org">arXiv</a>, <a href="https://aclanthology.org">ACL Anthology</a>, dan <a href="https://openalex.org">OpenAlex</a>. Thank you to arXiv for use of its open access interoperability.</p>
     <p>Ringkasan dibuat otomatis oleh model bahasa dan bisa keliru. Selalu periksa makalah aslinya. <a href="{esc(site.get('repo_url', '#'))}">Kode sumber</a>.</p>
   </div>
 </footer>
@@ -131,10 +155,11 @@ def signals_inline(paper: dict) -> str:
 
 def card(config: Config, paper: dict) -> str:
     summary = paper.get("summary")
-    if summary:
+    pair = tldr_pair(summary)
+    if pair:
         tldr = (
-            f'<p class="tldr" lang="id">{inline(summary["id"]["tldr"])}</p>'
-            f'<p class="tldr tldr-en" lang="en">{plain(summary["en"]["tldr"])}</p>'
+            f'<p class="tldr" lang="id">{inline(pair[0])}</p>'
+            f'<p class="tldr tldr-en" lang="en">{plain(pair[1])}</p>'
         )
     else:
         abstract = paper["abstract"]
@@ -145,7 +170,7 @@ def card(config: Config, paper: dict) -> str:
         + (summary.get("languages_studied", []) if summary else [])
     ).lower()
     return f"""<article class="card" data-date="{esc(paper['published'])}" data-score="{paper.get('score', 0)}" data-topics="{esc(' '.join(paper.get('topics', [])))}" data-search="{esc(search_blob)}">
-  <div class="card-meta"><time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time><span>{esc(paper['primary_category'])}</span>{topic_chips(config, paper)}</div>
+  <div class="card-meta"><time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time><span>{esc(source_label(paper))}</span>{topic_chips(config, paper)}</div>
   <h2><a href="papers/{slug(paper['id'])}.html">{esc(paper['title'])}</a></h2>
   <p class="authors">{esc(authors_short(paper['authors']))}</p>
   {tldr}
@@ -183,29 +208,67 @@ def index_body(config: Config, papers: list[dict]) -> str:
 <p class="empty" id="no-results" hidden>Tidak ada makalah yang cocok.</p>"""
 
 
-def summary_column(summary: dict, lang: str, heading: str) -> str:
-    part = summary[lang]
-    fmt = inline if lang == "id" else plain
-    points = "".join(f"<li>{fmt(p)}</li>" for p in part["key_points"])
-    return f"""<div class="summary-col" lang="{lang}">
-  <h3>{heading}</h3>
-  <p class="tldr-box">{fmt(part['tldr'])}</p>
-  {paragraphs(part['summary'], fmt)}
-  <h4>{'Poin utama' if lang == 'id' else 'Key points'}</h4>
-  <ul>{points}</ul>
-</div>"""
+def legacy_summary(summary: dict) -> str:
+    """Ringkasan format lama (sebelum enam bagian), ditampilkan sampai dibuat ulang."""
+    cols = []
+    for lang, heading in (("id", "Bahasa Indonesia"), ("en", "English")):
+        part = summary[lang]
+        fmt = inline if lang == "id" else plain
+        cols.append(f'''<div class="summary-col" lang="{lang}"><h3>{heading}</h3>{paragraphs(part.get("summary", ""), fmt)}</div>''')
+    return f'<div class="compare">{"".join(cols)}</div>'
+
+
+def structured_summary(summary: dict) -> str:
+    """Enam bagian ringkasan; tiap bagian menampilkan versi Indonesia dan Inggris berdampingan."""
+    blocks = []
+    for key, title_id, title_en in SECTIONS:
+        part = summary["sections"].get(key)
+        if not part:
+            continue
+        blocks.append(f"""<section class="summary-section" id="{key}">
+  <h3>{esc(title_id)} <span class="en-title" lang="en">{esc(title_en)}</span></h3>
+  <div class="compare">
+    <div class="summary-col" lang="id"><span class="col-label">Indonesia</span>{paragraphs(part['id'], inline)}</div>
+    <div class="summary-col" lang="en"><span class="col-label">English</span>{paragraphs(part['en'], plain)}</div>
+  </div>
+</section>""")
+    return "\n".join(blocks)
+
+
+def links_for(paper: dict) -> list[tuple[str, str]]:
+    source = paper.get("source", "arxiv")
+    main_label = {"arxiv": "arXiv", "acl": "ACL Anthology"}.get(source, "DOI" if paper.get("doi") else "Halaman makalah")
+    links = [(main_label, paper["abs_url"])]
+    if paper.get("pdf_url"):
+        links.append(("PDF", paper["pdf_url"]))
+    for alt in paper.get("also", []):
+        label = {"arxiv": "arXiv", "acl": "ACL Anthology"}.get(alt.get("source"), alt.get("venue") or "Versi lain")
+        if alt.get("url"):
+            links.append((label, alt["url"]))
+    links += [(label, url) for label, _, url in signal_items(paper) if url]
+    return links
 
 
 def paper_body(config: Config, paper: dict) -> str:
     summary = paper.get("summary")
-    links = [("arXiv", paper["abs_url"]), ("PDF", paper["pdf_url"])]
-    links += [(label, url) for label, _, url in signal_items(paper) if url]
-    link_html = "".join(f'<a class="button" href="{esc(url)}" rel="noopener">{esc(label)}</a>' for label, url in links)
+    link_html = "".join(
+        f'<a class="button" href="{esc(url)}" rel="noopener">{esc(label)}</a>' for label, url in links_for(paper)
+    )
 
     matched = paper.get("matched_keywords") or {}
     matched_html = "".join(
         f"<li><b>{esc(config.topic(tid).label_id if config.topic(tid) else tid)}</b>: {esc(', '.join(kws))}</li>"
         for tid, kws in matched.items()
+    )
+
+    pair = tldr_pair(summary)
+    tldr_html = (
+        f"""<div class="tldr-card">
+    <span class="tldr-label">TL;DR</span>
+    <p lang="id">{inline(pair[0])}</p>
+    <p class="tldr-en" lang="en">{plain(pair[1])}</p>
+  </div>"""
+        if pair else ""
     )
 
     if summary:
@@ -218,32 +281,39 @@ def paper_body(config: Config, paper: dict) -> str:
             '<p class="langs"><b>Bahasa yang dikaji:</b> ' + "".join(f'<span class="chip">{esc(l)}</span>' for l in langs) + "</p>"
             if langs else ""
         )
+        if summary.get("source") == "full_text":
+            basis = "dari isi lengkap makalah (PDF)"
+        else:
+            basis = "hanya dari judul dan abstrak, karena PDF akses terbuka tidak tersedia"
+        body = structured_summary(summary) if "sections" in summary else legacy_summary(summary)
         summary_html = f"""<section class="summary">
   <h2>Ringkasan</h2>
+  <p class="note">Dibuat otomatis oleh {esc(summary.get('model', 'model bahasa'))} {basis}. TL;DR di atas diringkas dari abstrak. Istilah bercetak miring sengaja dipertahankan dalam bahasa Inggris.</p>
   {langs_html}
-  <div class="compare">
-    {summary_column(summary, 'id', 'Bahasa Indonesia')}
-    {summary_column(summary, 'en', 'English')}
-  </div>
-  <p class="note">Ringkasan dibuat otomatis oleh {esc(summary.get('model', 'model bahasa'))} hanya dari judul dan abstrak, bukan dari isi lengkap makalah. Istilah bercetak miring sengaja dipertahankan dalam bahasa Inggris.</p>
+  {body}
 </section>
 {glossary_html}"""
         abstract_html = f'<details class="abstract"><summary>Abstrak asli</summary><p lang="en">{esc(paper["abstract"])}</p></details>'
     else:
         summary_html = '<p class="note">Ringkasan dwibahasa belum tersedia untuk makalah ini. Berikut abstrak aslinya.</p>'
-        abstract_html = f'<section class="abstract-open"><h2>Abstrak</h2><p lang="en">{esc(paper["abstract"])}</p></section>'
+        abstract_html = f'<section class="abstract-open"><h2>Abstrak</h2><p lang="en">{esc(paper["abstract"] or "Abstrak tidak tersedia.")}</p></section>'
 
     extra = ""
     if paper.get("comment"):
         extra += f"<li><b>Catatan penulis:</b> {esc(paper['comment'])}</li>"
     if paper.get("journal_ref"):
         extra += f"<li><b>Terbit di:</b> {esc(paper['journal_ref'])}</li>"
+    extra += f"<li><b>Sumber data:</b> {esc(DATA_SOURCES.get(paper.get('source', 'arxiv'), 'arXiv'))}</li>"
 
+    meta = [date_id(paper["published"]), source_label(paper)]
+    if paper.get("source", "arxiv") == "arxiv" and paper.get("categories"):
+        meta.append(", ".join(paper["categories"]))
     return f"""<p class="back"><a href="../index.html">&larr; Semua makalah</a></p>
 <article class="paper">
-  <div class="card-meta"><time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time><span>{esc(', '.join(paper['categories']))}</span></div>
+  <div class="card-meta">{"".join(f"<span>{esc(m)}</span>" for m in meta)}</div>
   <h1 lang="en">{esc(paper['title'])}</h1>
   <p class="authors">{esc(', '.join(paper['authors']))}</p>
+  {tldr_html}
   <div class="topic-row">{topic_chips(config, paper)}</div>
   <div class="links">{link_html}</div>
   {summary_html}
@@ -267,11 +337,11 @@ def about_body(config: Config) -> str:
 
 <h2>Cara kerja</h2>
 <ol>
-<li>Setiap hari, sistem mencari makalah baru di arXiv pada kategori {esc(cats)} memakai kata kunci tiap topik.</li>
+<li>Setiap hari, sistem mencari makalah baru dari tiga sumber: arXiv (kategori {esc(cats)}), ACL Anthology (volume prosiding yang baru masuk), dan OpenAlex (jurnal serta konferensi lain, misalnya IEEE). Makalah yang sama dari beberapa sumber digabung menjadi satu.</li>
 <li>Setiap makalah diberi <b>skor relevansi</b> berdasarkan kata kunci yang muncul di judul dan abstraknya. Kata kunci di judul bernilai dua kali lipat.</li>
 <li>Sistem mengumpulkan <b>sinyal keramaian</b> dari Hugging Face Papers, Hacker News, GitHub, dan jumlah sitasi dari Semantic Scholar.</li>
 <li>Skor akhir adalah relevansi ditambah keramaian, lalu berkurang separuh setiap {esc(str(config.ranking.get('half_life_days', 14)))} hari supaya makalah baru tidak tenggelam.</li>
-<li>Gemini membuat ringkasan dalam bahasa Inggris dan Indonesia dari judul dan abstrak. Istilah teknis yang lazim tetap ditulis dalam bahasa Inggris dan dicetak miring, disertai glosarium.</li>
+<li>Gemini membaca isi lengkap makalah (PDF akses terbuka) dan menyusun ringkasan dalam bahasa Inggris dan Indonesia dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. TL;DR dua kalimat diringkas dari abstrak. Istilah teknis yang lazim tetap ditulis dalam bahasa Inggris dan dicetak miring, disertai glosarium.</li>
 </ol>
 
 <h2>Topik yang dipantau</h2>
@@ -279,14 +349,14 @@ def about_body(config: Config) -> str:
 
 <h2>Keterbatasan</h2>
 <ul>
-<li>Ringkasan dibuat dari abstrak saja, jadi rincian eksperimen di badan makalah tidak tercakup.</li>
+<li>Jika PDF akses terbuka tidak tersedia (misalnya makalah jurnal berbayar), ringkasan dibuat dari abstrak saja. Halaman makalah menyebutkan dasar ringkasannya.</li>
 <li>Model bahasa bisa keliru. Periksa makalah aslinya sebelum mengutip.</li>
 <li>Makalah tentang bahasa berdaya sumber rendah jarang ramai di media sosial, sehingga peringkat lebih banyak ditentukan oleh relevansi dan kebaruan.</li>
 <li>Sinyal dari X (Twitter) dan Reddit belum dipakai karena API-nya berbayar atau mewajibkan otorisasi khusus.</li>
 </ul>
 
 <h2>Sumber data</h2>
-<p>Metadata makalah diambil dari <a href="https://info.arxiv.org/help/api/index.html">arXiv API</a>. Thank you to arXiv for use of its open access interoperability. Situs ini tidak berafiliasi dengan arXiv. Hak cipta setiap makalah tetap milik penulisnya.</p>
+<p>Metadata makalah diambil dari <a href="https://info.arxiv.org/help/api/index.html">arXiv API</a>, data terbuka <a href="https://github.com/acl-org/acl-anthology">ACL Anthology</a> (CC BY 4.0), dan <a href="https://openalex.org">OpenAlex</a> (CC0). Thank you to arXiv for use of its open access interoperability. Situs ini tidak berafiliasi dengan arXiv, ACL, maupun OpenAlex. Hak cipta setiap makalah tetap milik penulisnya.</p>
 </article>"""
 
 
@@ -296,7 +366,8 @@ def feed(config: Config, papers: list[dict], updated_at: str | None) -> str:
     items = []
     for p in sorted(papers, key=lambda p: p["published"], reverse=True)[:50]:
         link = f"{base}/papers/{slug(p['id'])}.html" if base else p["abs_url"]
-        desc = p["summary"]["id"]["tldr"] if p.get("summary") else p["abstract"][:400]
+        pair = tldr_pair(p.get("summary"))
+        desc = pair[0] if pair else p["abstract"][:400]
         items.append(
             f"<item><title>{esc(p['title'])}</title><link>{esc(link)}</link>"
             f"<guid isPermaLink=\"false\">arxiv:{esc(p['id'])}</guid>"
@@ -353,7 +424,8 @@ def build_site(config: Config, out: Path, data: dict | None = None) -> None:
         page(f"Tentang | {title}", about_body(config), root="", config=config, updated_at=updated_at), encoding="utf-8"
     )
     for paper in papers:
-        desc = paper["summary"]["id"]["tldr"] if paper.get("summary") else paper["abstract"][:200]
+        pair = tldr_pair(paper.get("summary"))
+        desc = pair[0] if pair else paper["abstract"][:200]
         (out / "papers" / f"{slug(paper['id'])}.html").write_text(
             page(f"{paper['title']} | {title}", paper_body(config, paper), root="../",
                  config=config, updated_at=updated_at, description=desc.replace("*", "")),

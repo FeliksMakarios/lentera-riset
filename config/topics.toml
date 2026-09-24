@@ -25,6 +25,21 @@ request_delay_seconds = 3.5
 # Makalah yang lebih tua dari ini tidak diambil lagi dan sinyalnya tidak diperbarui.
 lookback_days = 60
 
+[acl]
+# ACL Anthology, lewat data XML terbuka di GitHub (acl-org/acl-anthology).
+enabled = true
+# Volume yang masuk ke Anthology dalam rentang ini ikut diambil.
+lookback_days = 120
+# Batas berkas XML yang diunduh per sekali jalan.
+max_files_per_run = 150
+
+[openalex]
+# OpenAlex, untuk jurnal dan konferensi di luar arXiv dan ACL (misalnya IEEE).
+# Perlu kunci API gratis dari https://openalex.org/settings/api (secret OPENALEX_API_KEY).
+enabled = true
+lookback_days = 60
+max_results_per_topic = 200
+
 [ranking]
 # Makalah baru disimpan jika skor relevansinya mencapai ambang ini.
 min_relevance = 2.0
@@ -33,7 +48,12 @@ half_life_days = 14
 
 [summaries]
 # Jumlah maksimum ringkasan baru per sekali jalan, supaya kuota gratis tidak habis.
-max_per_run = 25
+max_per_run = 20
+# Baca isi lengkap makalah (PDF akses terbuka). Jika PDF tidak tersedia,
+# ringkasan dibuat dari abstrak.
+use_full_text = true
+# Batas ukuran PDF (MB) yang dikirim ke Gemini.
+max_pdf_mb = 14
 # Jeda antarpanggilan Gemini, dalam detik (kuota gratis dibatasi per menit).
 request_delay_seconds = 7
 # Model dicoba berurutan; model berikutnya dipakai jika model sebelumnya tidak ada,

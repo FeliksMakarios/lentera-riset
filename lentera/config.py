@@ -28,9 +28,18 @@ class Config:
     ranking: dict
     summaries: dict
     topics: list[Topic] = field(default_factory=list)
+    acl: dict = field(default_factory=dict)
+    openalex: dict = field(default_factory=dict)
 
     def topic(self, topic_id: str) -> Topic | None:
         return next((t for t in self.topics if t.id == topic_id), None)
+
+    def source_settings(self, source: str) -> dict:
+        """Pengaturan per sumber: "arxiv", "acl", atau "openalex"."""
+        return {"acl": self.acl, "openalex": self.openalex}.get(source, self.arxiv)
+
+    def lookback_days(self, source: str) -> float:
+        return float(self.source_settings(source).get("lookback_days", 60))
 
 
 def load_config(path: Path = DEFAULT_CONFIG) -> Config:
@@ -57,4 +66,6 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         ranking=raw.get("ranking", {}),
         summaries=raw.get("summaries", {}),
         topics=topics,
+        acl=raw.get("acl", {}),
+        openalex=raw.get("openalex", {}),
     )

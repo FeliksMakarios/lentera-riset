@@ -1,3 +1,4 @@
+import base64
 import copy
 import json
 import unittest
@@ -18,17 +19,22 @@ class ValidateTest(unittest.TestCase):
         out = summarize.validate(copy.deepcopy(SUMMARY))
         self.assertEqual(out["glossary"][0]["term"], "benchmark")
 
-    def test_missing_language_fails(self):
+    def test_missing_section_fails(self):
         bad = copy.deepcopy(SUMMARY)
-        del bad["id"]
+        del bad["sections"]["method"]
         with self.assertRaises(ValueError):
             summarize.validate(bad)
 
-    def test_empty_key_points_fails(self):
+    def test_empty_language_fails(self):
         bad = copy.deepcopy(SUMMARY)
-        bad["en"]["key_points"] = []
+        bad["sections"]["results"]["id"] = "  "
         with self.assertRaises(ValueError):
             summarize.validate(bad)
+
+    def test_output_has_version_and_all_sections(self):
+        out = summarize.validate(copy.deepcopy(SUMMARY))
+        self.assertEqual(out["version"], summarize.SUMMARY_VERSION)
+        self.assertEqual(list(out["sections"]), [k for k, _, _ in summarize.SECTIONS])
 
 
 class SummarizerTest(unittest.TestCase):
@@ -39,7 +45,8 @@ class SummarizerTest(unittest.TestCase):
         with mock.patch.object(http, "post_json", return_value=gemini_response(SUMMARY)) as post:
             result, model = summarize.Summarizer(["m1"], api_key="k").summarize(PAPER)
         self.assertEqual(model, "m1")
-        self.assertEqual(result["id"]["tldr"], SUMMARY["id"]["tldr"])
+        self.assertEqual(result["tldr"]["id"], SUMMARY["tldr"]["id"])
+        self.assertEqual(result["source"], "abstract")
         url, payload = post.call_args.args
         self.assertIn("/models/m1:generateContent", url)
         self.assertEqual(post.call_args.kwargs["headers"], {"x-goog-api-key": "k"})
@@ -131,12 +138,47 @@ class ListModelsTest(unittest.TestCase):
 class StripMarksTest(unittest.TestCase):
     def test_validate_strips_asterisks_from_english_only(self):
         s = copy.deepcopy(SUMMARY)
-        s["en"]["tldr"] = "About *low-resource* MT."
-        s["en"]["key_points"] = ["Uses *NusaX*"]
+        s["tldr"]["en"] = "About *low-resource* MT."
         out = summarize.validate(s)
-        self.assertEqual(out["en"]["tldr"], "About low-resource MT.")
-        self.assertEqual(out["en"]["key_points"], ["Uses NusaX"])
-        self.assertIn("*low-resource*", out["id"]["tldr"])
+        self.assertEqual(out["tldr"]["en"], "About low-resource MT.")
+        self.assertEqual(out["sections"]["method"]["en"], "Method with fine-tuning.")
+        self.assertIn("*low-resource*", out["tldr"]["id"])
+        self.assertIn("*fine-tuning*", out["sections"]["method"]["id"])
+
+
+class PdfRequestTest(unittest.TestCase):
+    def test_pdf_is_sent_inline_before_prompt(self):
+        payload = summarize.build_request(PAPER, b"%PDF-1.7 fake")
+        parts = payload["contents"][0]["parts"]
+        self.assertEqual(parts[0]["inlineData"]["mimeType"], "application/pdf")
+        self.assertEqual(base64.b64decode(parts[0]["inlineData"]["data"]), b"%PDF-1.7 fake")
+        self.assertIn("full paper is attached", parts[1]["text"])
+
+    def test_without_pdf_uses_abstract_note(self):
+        parts = summarize.build_request(PAPER, None)["contents"][0]["parts"]
+        self.assertEqual(len(parts), 1)
+        self.assertIn("Only the title, abstract", parts[0]["text"])
+
+    def test_source_is_full_text_when_pdf_accepted(self):
+        s = summarize.Summarizer(["m"], api_key="k", log=lambda *_: None)
+        with mock.patch.object(http, "post_json", return_value=gemini_response(SUMMARY)):
+            result, _ = s.summarize(PAPER, b"%PDF")
+        self.assertEqual(result["source"], "full_text")
+
+    def test_rejected_pdf_falls_back_to_abstract(self):
+        calls = []
+
+        def fake(url, payload, **kwargs):
+            calls.append(payload)
+            if len(calls) == 1:
+                raise http.HttpError(400, url, "The document has no pages.")
+            return gemini_response(SUMMARY)
+
+        s = summarize.Summarizer(["m"], api_key="k", log=lambda *_: None)
+        with mock.patch.object(http, "post_json", side_effect=fake):
+            result, _ = s.summarize(PAPER, b"%PDF")
+        self.assertEqual(result["source"], "abstract")
+        self.assertEqual(len(calls[1]["contents"][0]["parts"]), 1)
 
 
 if __name__ == "__main__":

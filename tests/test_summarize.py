@@ -92,8 +92,24 @@ class SummarizerTest(unittest.TestCase):
         self.assertEqual(s.models, ["a", "b"])  # model sibuk tidak dibuang
 
     def test_all_busy_raises_model_busy(self):
-        out, _, _ = self.run_with(["a", "b"], [http.HttpError(503, "u"), http.HttpError(503, "u")])
+        with mock.patch.object(summarize, "list_flash_models", return_value=["a", "b"]):
+            out, _, _ = self.run_with(["a", "b"], [http.HttpError(503, "u"), http.HttpError(503, "u")])
         self.assertIsInstance(out, summarize.ModelBusy)
+
+    def test_all_busy_tries_discovered_backup_model(self):
+        with mock.patch.object(summarize, "list_flash_models", return_value=["a", "gemini-9-flash"]):
+            out, s, calls = self.run_with(["a"], [http.HttpError(503, "u"), gemini_response(SUMMARY)])
+        self.assertEqual(out[1], "gemini-9-flash")
+        self.assertEqual(s.models, ["a", "gemini-9-flash"])
+
+    def test_discovery_happens_once_per_run(self):
+        with mock.patch.object(summarize, "list_flash_models", return_value=["b"]) as lister:
+            s = summarize.Summarizer(["a"], api_key="k", log=lambda *_: None, sleep=lambda *_: None)
+            with mock.patch.object(http, "post_json", side_effect=http.HttpError(503, "u")):
+                for _ in range(3):
+                    with self.assertRaises(summarize.ModelBusy):
+                        s.summarize(PAPER)
+        self.assertEqual(lister.call_count, 1)
 
     def test_per_minute_limit_tries_next_model(self):
         out, s, _ = self.run_with(["a", "b"], [http.HttpError(429, "u", "GenerateRequestsPerMinute"), gemini_response(SUMMARY)])

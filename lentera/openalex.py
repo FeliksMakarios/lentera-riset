@@ -46,7 +46,8 @@ def build_filter(topic: Topic, since: str) -> str:
     terms = " OR ".join(f'"{kw}"' for kw in topic.keywords)
     return ",".join([
         f"title_and_abstract.search:({terms})",
-        f"from_created_date:{since}",
+        # from_created_date hanya untuk paket berbayar, jadi dipakai tanggal terbit.
+        f"from_publication_date:{since}",
         f"topics.field.id:{COMPUTER_SCIENCE_FIELD}",
         "type:article",
     ])

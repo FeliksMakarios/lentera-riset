@@ -40,6 +40,7 @@
     "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
+   "venue": "arXiv",
    "version": 1
   },
   "2609.27387": {
@@ -73,7 +74,7 @@
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
    "relevance": 3.5,
-   "score": 3.4323,
+   "score": 3.4247,
    "signals": {
     "semantic_scholar": {
      "citations": 0,
@@ -82,54 +83,82 @@
     }
    },
    "summary": {
-    "en": {
-     "key_points": [
-      "AraGenre evaluated hierarchical and definition-guided Arabic genre classification.",
-      "The setup tested zero-shot label generalisation using natural-language definitions for 74 unseen specific genres.",
-      "The evaluation included Modern Standard Arabic, Classical Arabic, and multiple dialects.",
-      "Thakaa ranked first among 17 participating teams with a Hierarchical Macro F1 of 0.7352."
-     ],
-     "summary": "Arabic text classification faces challenges due to limited annotated data, particularly across various dialects and linguistic registers. To address this, the AraGenre shared task challenged participants to perform hierarchical genre classification using natural-language definitions for unseen genres rather than relying on fixed label-feature memorisation.\n\nThe evaluation featured datasets containing synthetic training examples and a noisier natural test set spanning Modern Standard Arabic, Classical Arabic, and multiple dialects. Thakaa secured first place with a Hierarchical Macro F1 of 0.7352, demonstrating strong broad-genre recognition while revealing performance gaps in fine-grained classification.",
-     "tldr": "AraGenre 2026 is a shared task evaluating hierarchical, definition-guided Arabic genre classification in a zero-shot label generalisation setting."
-    },
-    "generated_at": "2026-09-24T13:21:23+00:00",
+    "generated_at": "2026-09-24T14:43:28+00:00",
     "glossary": [
      {
-      "explanation_id": "Kompetisi bersama di antara para peneliti untuk menyelesaikan tugas NLP menggunakan set data standar yang sama.",
-      "term": "shared task"
+      "explanation_id": "Sebuah *setting* evaluasi di mana model harus mengenali kategori baru tanpa diberi contoh pelatihan beranotasi sebelumnya untuk kategori tersebut.",
+      "term": "zero-shot"
      },
      {
-      "explanation_id": "Kemampuan model untuk mengenali dan menggeneralisasi label kelas baru tanpa pelatihan contoh sebelumnya.",
-      "term": "zero-shot label generalisation"
+      "explanation_id": "Kondisi di mana suatu bahasa atau tugas memiliki ketersediaan data pelatihan beranotasi yang sangat terbatas.",
+      "term": "low-resource"
      },
      {
-      "explanation_id": "Metrik evaluasi yang menghitung rata-rata skor F1 secara hierarkis pada berbagai tingkat kategori.",
-      "term": "Hierarchical Macro F1"
+      "explanation_id": "Standar atau kumpulan data evaluasi yang digunakan untuk menguji dan membandingkan performa berbagai *model bahasa*.",
+      "term": "benchmark"
      },
      {
-      "explanation_id": "Bentuk standar bahasa Arab yang digunakan secara luas dalam tulisan dan media formal modern.",
-      "term": "Modern Standard Arabic"
+      "explanation_id": "Klasifikasi atau analisis yang berfokus pada kategori yang sangat spesifik dan terperinci.",
+      "term": "fine-grained"
      },
      {
-      "explanation_id": "Bentuk historis bahasa Arab yang digunakan dalam teks-teks keagamaan dan sastra klasik.",
-      "term": "Classical Arabic"
+      "explanation_id": "Sistem rujukan sederhana atau standar yang digunakan untuk membandingkan peningkatan performa dari *model* baru.",
+      "term": "baseline"
+     },
+     {
+      "explanation_id": "Situasi kebahasaan di mana dua varietas bahasa yang berbeda digunakan oleh komunitas yang sama dalam fungsi yang berbeda.",
+      "term": "diglossia"
+     },
+     {
+      "explanation_id": "Proses penambahan tanda diakritik atau harakat pada teks tulisan untuk membantu pelafalan.",
+      "term": "diacritisation"
+     },
+     {
+      "explanation_id": "Arsitektur *model* yang menggunakan dua encoder terpisah untuk memetakan teks dan kueri ke dalam ruang vektor bersama.",
+      "term": "bi-encoder"
      }
     ],
-    "id": {
-     "key_points": [
-      "AraGenre mengevaluasi klasifikasi genre bahasa Arab yang bersifat hierarkis dan dipandu definisi.",
-      "Pengaturan eksperimen menguji *zero-shot label generalisation* menggunakan definisi teks untuk 74 genre spesifik yang belum pernah dilihat.",
-      "Evaluasi mencakup *Modern Standard Arabic*, *Classical Arabic*, dan berbagai dialek bahasa Arab.",
-      "Tim Thakaa meraih peringkat pertama dari 17 tim yang menyelesaikan evaluasi akhir dengan skor *Hierarchical Macro F1* 0,7352."
-     ],
-     "summary": "Klasifikasi teks bahasa Arab menghadapi kendala akibat keterbatasan data ber-*anotasi*, terutama pada ragam dialek dan variasi linguistik. Untuk mengatasi hal tersebut, *shared task* AraGenre menantang peserta melakukan klasifikasi genre hierarkis menggunakan definisi bahasa alami untuk genre baru tanpa mengandalkan hafalan label.\n\nEvaluasi ini menggunakan set pelatihan sintetis serta set uji alami yang mencakup *Modern Standard Arabic*, *Classical Arabic*, dan berbagai dialek. Tim Thakaa menduduki peringkat pertama dengan *Hierarchical Macro F1* sebesar 0,7352, menunjukkan pengenalan genre luas yang kuat tetapi menyisakan celah pada klasifikasi tingkat lanjut.",
-     "tldr": "AraGenre 2026 adalah *shared task* untuk klasifikasi genre bahasa Arab berbasis definisi hierarkis dalam pengaturan *zero-shot label generalisation*."
-    },
     "languages_studied": [
-     "Arabic"
+     "Arabic",
+     "Hindi",
+     "Igbo",
+     "Vietnamese",
+     "Welsh"
     ],
     "model": "gemini-flash-lite-latest",
-    "source_hash": "6d6d54299452"
+    "sections": {
+     "background": {
+      "en": "Genre classification captures a text's communicative purpose, discourse structure, and stylistic behaviour rather than just its subject matter, supporting tasks such as information retrieval and content recommendation. For Arabic, this task is complicated by diglossia, dialect variation, optional diacritisation, and non-standard orthography, which are further exacerbated by the scarcity of annotated data in low-resource settings. Existing benchmarks generally assume that all genres are known during training, creating a significant gap in handling unseen categories and natural distributional shifts.",
+      "id": "Klasifikasi genre menangkap tujuan komunikatif, struktur wacana, dan perilaku stilistika suatu teks alih-alih hanya pokok bahasannya, serta mendukung tugas seperti *information retrieval* dan rekomendasi konten. Untuk bahasa Arab, tugas ini rumit karena diglosia, variasi dialek, diakritisasi opsional, dan ortografi non-standar, yang semakin diperparah oleh kelangkaan data beranotasi pada *setting* *low-resource*. *Benchmark* yang ada umumnya mengasumsikan bahwa semua genre diketahui selama pelatihan, sehingga menciptakan kesenjangan signifikan dalam menangani kategori yang belum pernah dilihat dan pergeseran distribusi alami."
+     },
+     "contributions": {
+      "en": "The AraGenre shared task introduces several key contributions: a two-level Arabic genre taxonomy containing six broad and multiple specific genres, a definition-guided framework for zero-shot label generalisation using natural-language definitions, a controlled low-resource training setup paired with a naturally occurring distribution-shifted evaluation benchmark, two reproducible baselines, and an official evaluation involving 17 final teams.",
+      "id": "T *shared task* AraGenre memperkenalkan beberapa kontribusi utama: taksonomi genre bahasa Arab dua tingkat yang berisi enam genre luas dan beberapa genre spesifik, kerangka kerja berpanduan definisi untuk generalisasi label *zero-shot* menggunakan definisi bahasa alami, *setup* pelatihan *low-resource* terkontrol yang dipasangkan dengan *benchmark* evaluasi bergeser distribusi yang muncul secara alami, dua *baseline* yang dapat direproduksi, dan evaluasi resmi yang melibatkan 17 tim final."
+     },
+     "future_work": {
+      "en": "The authors suggest that future editions should expand naturally occurring labelled data, provide parallel Arabic and English definitions, investigate hierarchy-aware consistency constraints, and support systematic analysis across dialects, text lengths, and overlapping communicative functions.",
+      "id": "Para penulis menyarankan agar edisi mendatang memperluas data beranotasi yang muncul secara alami, menyediakan definisi paralel bahasa Arab dan bahasa Inggris, menyelidiki batasan konsistensi yang sadar hierarki, dan mendukung analisis sistematis di seluruh dialek, panjang teks, serta fungsi komunikatif yang tumpang tindih."
+     },
+     "method": {
+      "en": "Systems are tasked with predicting both a broad and a specific genre label for each Arabic text segment given English natural-language definitions for 74 previously unseen specific genres, establishing a zero-shot label generalisation setting. The released training and development sets contained limited, controlled examples, whereas the final evaluation benchmark comprised 27,972 noisy, naturally occurring instances spanning Modern Standard Arabic, Classical Arabic, and various dialects. Performance is evaluated using Macro F1, Weighted F1, and accuracy, with the official ranking determined by Hierarchical Macro F1.",
+      "id": "Sistem ditugaskan untuk memprediksi label genre luas dan spesifik untuk setiap segmen teks bahasa Arab berdasarkan definisi bahasa alami bahasa Inggris untuk 74 genre spesifik yang belum pernah terlihat sebelumnya, membentuk *setting* generalisasi label *zero-shot*. *Set* pelatihan dan pengembangan yang dirilis berisi contoh terbatas dan terkontrol, sedangkan *benchmark* evaluasi akhir terdiri dari 27.972 instans berderau yang muncul secara alami yang mencakup bahasa Arab Standar Modern, bahasa Arab Klasik, dan berbagai dialek. Performa dievaluasi menggunakan Macro F1, Weighted F1, dan akurasi, dengan peringkat resmi yang ditentukan oleh Hierarchical Macro F1."
+     },
+     "related_work": {
+      "en": "Prior research on Arabic text classification has relied on stylistic and linguistic features or functional text dimensions using small, fixed label inventories that assume all target categories are present during training. While various studies have explored text classification and resource creation in diverse languages, these traditional supervised approaches struggle to generalise beyond observed training distributions to emerging communicative practices or unseen classes without explicit training examples.",
+      "id": "Penelitian terdahulu tentang klasifikasi teks bahasa Arab telah mengandalkan fitur stilistika dan linguistik atau dimensi teks fungsional menggunakan inventaris label kecil dan tetap yang mengasumsikan semua kategori target hadir selama pelatihan. Meskipun berbagai studi telah mengeksplorasi klasifikasi teks dan pembuatan sumber daya dalam beragam bahasa, pendekatan terawasi tradisional ini kesulitan untuk melakukan generalisasi di luar distribusi pelatihan yang diamati menuju praktik komunikatif baru atau kelas yang tak terlihat tanpa contoh pelatihan eksplisit."
+     },
+     "results": {
+      "en": "The shared task attracted 46 registrations and 373 submissions, with 17 teams completing the final evaluation and all outperforming the organizer baselines. Thakaa ranked first with a Hierarchical Macro F1 of 0.7352, followed by HoangPhong with 0.7169 and NAMAA with 0.7013. The results revealed a large average gap of 0.3271 between high broad-genre recognition and lower fine-grained specific classification, alongside a substantial performance drop from development to the final evaluation phase due to distribution shift.",
+      "id": "*Shared task* ini menarik 46 pendaftaran dan 373 pengiriman, dengan 17 tim yang menyelesaikan evaluasi akhir dan semuanya mengungguli *baseline* penyelenggara. Thakaa menduduki peringkat pertama dengan Hierarchical Macro F1 sebesar 0,7352, diikuti oleh HoangPhong dengan 0,7169 dan NAMAA dengan 0,7013. Hasilnya mengungkap kesenjangan rata-rata yang besar sebesar 0,3271 antara pengenalan genre luas yang tinggi dan klasifikasi spesifik berbutir halus yang lebih rendah, di samping penurunan performa yang substansial dari tahap pengembangan ke evaluasi akhir karena pergeseran distribusi."
+     }
+    },
+    "source": "full_text",
+    "source_hash": "6d6d54299452",
+    "tldr": {
+     "en": "This paper presents AraGenre, a shared task on hierarchical and definition-guided Arabic genre classification in a zero-shot setting. The results demonstrate strong broad-genre recognition but reveal a substantial performance gap in fine-grained classification under linguistic variation.",
+     "id": "Makalah ini menyajikan AraGenre, sebuah *shared task* pada klasifikasi genre bahasa Arab yang bersifat hierarkis dan dipandu definisi dalam *setting* *zero-shot*. Hasilnya menunjukkan pengenalan genre luas yang kuat namun mengungkap kesenjangan performa yang besar pada klasifikasi berbutir halus di bawah variasi linguistik."
+    },
+    "version": 2
    },
    "title": "AraGenre 2026: A Hierarchical Definition-Guided Arabic Genre Classification Shared Task",
    "topics": [
@@ -137,6 +166,7 @@
     "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
+   "venue": "arXiv",
    "version": 1
   },
   "2609.27758": {
@@ -167,7 +197,7 @@
    "primary_category": "cs.CL",
    "published": "2026-09-24T04:00:00Z",
    "relevance": 4.25,
-   "score": 4.1678,
+   "score": 4.1585,
    "signals": {
     "semantic_scholar": {
      "citations": 0,
@@ -176,56 +206,79 @@
     }
    },
    "summary": {
-    "en": {
-     "key_points": [
-      "Prior research suggested near-perfect cross-lingual transfer of harmfulness representations using easy negatives.",
-      "Using hard negatives from XSTest reveals that transfer collapses in low-resource languages.",
-      "The performance drop worsens as language resource tiers decrease, demonstrated on Qwen2.5-7B-Instruct and Aya Expanse.",
-      "Controls for translation quality and tokenizer fertility indicate that these factors only partially explain the degradation."
-     ],
-     "summary": "Safety alignment in *large language models* is primarily trained in English, and previous studies suggested that harmfulness representations transfer well to low-resource languages based on evaluations using easy negatives. However, these findings depend heavily on the choice of negative examples.\n\nEvaluating across nine languages spanning three resource tiers using XSTest contrast prompts as hard negatives, this study demonstrates that cross-lingual transfer collapses in low-resource languages while remaining stable in high-resource languages. These findings show that easy-negative evaluations are insufficient to establish whether harmfulness representations truly survive translation.",
-     "tldr": "Safety alignment cross-lingual transfer in large language models relies heavily on negative examples, where hard negatives reveal significant representation degradation in low-resource languages."
-    },
-    "generated_at": "2026-09-24T13:18:58+00:00",
+    "generated_at": "2026-09-24T14:42:24+00:00",
     "glossary": [
      {
-      "explanation_id": "Contoh negatif yang tampak serupa dengan permintaan berbahaya tetapi sebenarnya bersifat jinak.",
-      "term": "hard negatives"
-     },
-     {
-      "explanation_id": "Contoh negatif dari distribusi yang tidak berkaitan dan sangat mudah dibedakan dari data berbahaya.",
-      "term": "easy negatives"
-     },
-     {
-      "explanation_id": "Metode atau evaluasi yang melibatkan perpindahan atau penerapan antarbahasa.",
-      "term": "cross-lingual"
-     },
-     {
-      "explanation_id": "Metrik evaluasi yang mengukur area di bawah kurva karakteristik operasi penerima untuk performa klasifikasi.",
+      "explanation_id": "Metrik evaluasi yang mengukur area di bawah kurva *receiver operating characteristic* untuk menilai performa klasifikasi.",
       "term": "AUROC"
      },
      {
-      "explanation_id": "Ukuran seberapa banyak token yang dihasilkan oleh *tokenizer* untuk merepresentasikan satu kata atau teks tertentu.",
+      "explanation_id": "Model linier kecil yang dilatih untuk mengekstrak informasi konseptual atau semantik tertentu dari representasi internal *large language model*.",
+      "term": "probe"
+     },
+     {
+      "explanation_id": "Jalur komunikasi internal dalam *transformer* tempat representasi token diperbarui dan diteruskan secara akumulatif lintas *layer*.",
+      "term": "residual stream"
+     },
+     {
+      "explanation_id": "Rata-rata jumlah *subword* token yang dihasilkan oleh *tokenizer* untuk setiap kata dalam bahasa Inggris.",
       "term": "tokenizer fertility"
      },
      {
-      "explanation_id": "Proses menerjemahkan teks kembali ke bahasa asal untuk menguji kualitas atau konsistensi terjemahan.",
-      "term": "back-translation"
+      "explanation_id": "Metrik evaluasi *machine translation* yang menghitung skor *F-score* berdasarkan kecocokan *character n-gram*.",
+      "term": "chrF"
+     },
+     {
+      "explanation_id": "Proses pelatihan *large language model* untuk memastikan perilakunya selaras dengan pedoman keselamatan dan menghindari keluaran berbahaya.",
+      "term": "safety alignment"
      }
     ],
-    "id": {
-     "key_points": [
-      "Penelitian sebelumnya melaporkan transfer lintas bahasa yang hampir sempurna menggunakan *easy negatives*.",
-      "Penggunaan *hard negatives* dari XSTest membuktikan bahwa transfer representasi runtuh pada bahasa *low-resource*.",
-      "Penurunan performa semakin parah pada tingkat sumber daya yang lebih rendah, seperti yang diuji pada model Qwen2.5-7B-Instruct dan Aya Expanse.",
-      "Faktor kualitas penerjemahan dan *tokenizer fertility* telah dikontrol dan terbukti hanya sebagian yang menjelaskan degradasi tersebut."
-     ],
-     "summary": "*Safety alignment* pada *large language model* umumnya dilatih dalam bahasa Inggris, dan penelitian sebelumnya melaporkan bahwa representasi kebahayaan dapat ditransfer dengan baik ke bahasa *low-resource*. Akan tetapi, kesimpulan ini sangat bergantung pada pemilihan contoh negatif yang digunakan dalam evaluasi.\n\nDengan menguji sembilan bahasa dari tiga tingkat sumber daya menggunakan *prompt* kontras dari XSTest sebagai *hard negatives*, studi ini menunjukkan bahwa transfer lintas bahasa mengalami kegagalan pada bahasa *low-resource* tetapi tetap stabil pada bahasa *high-resource*. Hasil ini membuktikan bahwa evaluasi menggunakan *easy negatives* saja tidak cukup untuk menyimpulkan bahwa representasi kebahayaan bertahan dengan baik setelah penerjemahan.",
-     "tldr": "*Safety alignment* pada *large language model* menunjukkan degradasi representasi bahaya yang signifikan pada bahasa *low-resource* ketika diuji menggunakan *hard negatives*."
-    },
-    "languages_studied": [],
+    "languages_studied": [
+     "English",
+     "French",
+     "Spanish",
+     "Vietnamese",
+     "Mandarin",
+     "Arabic",
+     "Hindi",
+     "Swahili",
+     "Telugu",
+     "Amharic"
+    ],
     "model": "gemini-flash-lite-latest",
-    "source_hash": "359c5fd501b7"
+    "sections": {
+     "background": {
+      "en": "Safety alignment in large language models is predominantly trained in English, raising important questions about how safely behaviors transfer across languages. Previous studies have suggested that harmfulness representations survive translation because English-trained probes can successfully separate harmful from harmless prompts even in low-resource languages. However, this paper addresses the critical gap that such conclusions rely heavily on the choice of negative examples, questioning whether the representation truly remains intact when more rigorous evaluation conditions are applied.",
+      "id": "Penyelarasan keamanan pada *large language model* terutama dilatih dalam bahasa Inggris, sehingga menimbulkan pertanyaan penting tentang bagaimana perilaku keamanan tersebut ditransfer lintas bahasa. Studi sebelumnya menyarankan bahwa representasi kebahayaan bertahan dari proses terjemahan karena *probe* yang dilatih dalam bahasa Inggris mampu memisahkan *prompt* berbahaya dan tidak berbahaya bahkan pada bahasa *low-resource*. Namun, makalah ini mengatasi kesenjangan kritis bahwa kesimpulan tersebut sangat bergantung pada pemilihan contoh negatif, serta mempertanyakan apakah representasi tersebut benar-benar tetap utuh ketika kondisi evaluasi yang lebih ketat diterapkan."
+     },
+     "contributions": {
+      "en": "This paper demonstrates that cross-lingual harmfulness transfer critically depends on the choice of negative examples, showing that high transfer performance with easy negatives coexists with severe representation degradation under hard negatives. The authors introduce a systematic evaluation across nine languages and three resource tiers using XSTest contrast prompts as hard negatives, revealing a clear monotonic degradation gradient linked to resource tiers. Additionally, they provide rigorous controls for translation quality using back-translation chrF scores and examine the partial correlation with tokenizer fertility.",
+      "id": "Makalah ini mendemonstrasikan bahwa transfer kebahayaan lintas bahasa sangat bergantung pada pemilihan contoh negatif, serta menunjukkan bahwa performa transfer yang tinggi dengan negatif mudah dapat berdampingan dengan degradasi representasi yang parah di bawah negatif sulit. Para penulis memperkenalkan evaluasi sistematis di sembilan bahasa dan tiga tingkat sumber daya menggunakan *prompt* kontras XSTest sebagai negatif sulit, yang mengungkapkan gradien degradasi monoton yang jelas terkait dengan tingkat sumber daya. Selain itu, mereka menyediakan kontrol ketat untuk kualitas terjemahan menggunakan skor chrF *back-translation* dan memeriksa korelasi parsial dengan *tokenizer fertility*."
+     },
+     "future_work": {
+      "en": "The authors suggest that future research should test interventions such as vocabulary augmentation, tokenizer retraining, and activation steering to determine whether addressing tokenizer fertility and signal strength can mitigate representational degradation in low-resource languages.",
+      "id": "Para penulis menyarankan agar penelitian masa depan menguji intervensi seperti augmentasi *vocabulary*, pelatihan ulang *tokenizer*, dan *activation steering* untuk menentukan apakah mengatasi *tokenizer fertility* dan kekuatan sinyal dapat mengurangi degradasi representasi pada bahasa *low-resource*."
+     },
+     "method": {
+      "en": "The study evaluates two open instruction-tuned models, Qwen2.5-7B-Instruct and Aya-Expanse-8B, using a fixed pool of 200 harmful prompts and 250 harmless prompts translated into nine target languages across high, mid, and low resource tiers using NLLB-200. Two negative sets are constructed: easy negatives pairing AdvBench with Alpaca instructions, and hard negatives using XSTest contrast prompts that match harmful requests in surface form. Probes are implemented via logistic regression trained exclusively on English activations, evaluating transfer performance across layers using AUROC alongside back-translation chrF and tokenizer fertility controls.",
+      "id": "Studi ini mengevaluasi dua *model* *instruction-tuned* terbuka, Qwen2.5-7B-Instruct dan Aya-Expanse-8B, menggunakan kumpulan tetap berisi 200 *prompt* berbahaya dan 250 *prompt* tidak berbahaya yang diterjemahkan ke dalam sembilan bahasa target di tingkat sumber daya tinggi, menengah, dan rendah menggunakan NLLB-200. Dua set negatif dibangun: negatif mudah yang memasangkan AdvBench dengan instruksi Alpaca, dan negatif sulit menggunakan *prompt* kontras XSTest yang mencocokkan permintaan berbahaya dalam bentuk permukaan. *Probe* diimplementasikan melalui *logistic regression* yang dilatih secara eksklusif pada *aktivasi* bahasa Inggris, mengevaluasi performa transfer lintas *layer* menggunakan AUROC beserta kontrol chrF *back-translation* dan *tokenizer fertility*."
+     },
+     "related_work": {
+      "en": "The authors build upon and contrast with recent cross-lingual probing studies such as Aziz et al., who reported near-perfect transfer of harmfulness directions to low-resource languages and interpreted refusal failures as calibration issues. They also connect their work to findings by Schwarz and Llorente-Saguer, who demonstrated that easy negatives can inflate evaluation metrics like AUROC through surface-form cues rather than genuine semantic understanding. The authors argue that prior work overlooked the vulnerability of cross-lingual representations because they exclusively relied on straightforward, unrelated negative prompts.",
+      "id": "Para penulis membangun dan mengontraskan penelitian mereka dengan studi *probing* lintas bahasa terbaru seperti Aziz et al., yang melaporkan transfer arah kebahayaan yang hampir sempurna ke bahasa *low-resource* dan menginterpretasikan kegagalan penolakan sebagai masalah kalibrasi. Mereka juga menghubungkan karyanya dengan temuan oleh Schwarz dan Llorente-Saguer, yang menunjukkan bahwa negatif mudah dapat meningkatkan metrik evaluasi seperti AUROC melalui petunjuk bentuk permukaan alih-alih pemahaman semantik yang sesungguhnya. Para penulis berpendapat bahwa pekerjaan sebelumnya mengabaikan kerentanan representasi lintas bahasa karena mereka secara eksklusif mengandalkan *prompt* negatif yang sederhana dan tidak terkait."
+     },
+     "results": {
+      "en": "Under easy negatives, transfer AUROC remains above 0.98 across all languages, replicating prior claims of intact representations. However, under hard negatives, performance collapses significantly in low-resource languages, with Qwen2.5-7B-Instruct showing mean AUROC drops scaling from 0.003 in English to 0.276 in low-resource languages. The results replicate on Aya-Expanse-8B. Furthermore, controlled comparisons at fixed chrF scores and partial correlation analyses confirm that translation quality alone does not explain the collapse, while tokenizer fertility accounts for approximately half of the resource-tier effect.",
+      "id": "Di bawah negatif mudah, AUROC transfer tetap berada di atas 0,98 di semua bahasa, mereplikasi klaim sebelumnya tentang representasi yang utuh. Namun, di bawah negatif sulit, performa mengalami penurunan drastis pada bahasa *low-resource*, di mana Qwen2.5-7B-Instruct menunjukkan rata-rata penurunan AUROC dari 0,003 pada bahasa Inggris menjadi 0,276 pada bahasa *low-resource*. Hasil ini direplikasi pada Aya-Expanse-8B. Lebih lanjut, perbandingan terkontrol pada skor chrF tetap dan analisis korelasi parsial mengonfirmasi bahwa kualitas terjemahan saja tidak menjelaskan penurunan tersebut, sementara *tokenizer fertility* menyumbang sekitar setengah dari efek tingkat sumber daya."
+     }
+    },
+    "source": "full_text",
+    "source_hash": "359c5fd501b7",
+    "tldr": {
+     "en": "This paper investigates cross-lingual harmfulness representations in large language models using different negative example sets. The findings reveal that while probes appear intact with easy negatives, they experience severe degradation in low-resource languages under hard negatives.",
+     "id": "Makalah ini menyelidiki representasi kebahayaan lintas bahasa pada *large language model* menggunakan berbagai kumpulan contoh negatif. Temuan menunjukkan bahwa meskipun *probe* tampak utuh dengan negatif mudah, representasi tersebut mengalami degradasi parah pada bahasa *low-resource* di bawah negatif sulit."
+    },
+    "version": 2
    },
    "title": "Hard Negatives Reveal What Easy Negatives Hide: Cross-Lingual Harmfulness Representations Degrade with Resource Tier Under Hard Negatives",
    "topics": [
@@ -233,6 +286,7 @@
     "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
+   "venue": "arXiv",
    "version": 1
   },
   "2609.27811": {
@@ -279,6 +333,7 @@
     "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
+   "venue": "arXiv",
    "version": 1
   },
   "2609.27814": {
@@ -323,8 +378,16 @@
     "multilingual"
    ],
    "updated": "2026-09-24T04:00:00Z",
+   "venue": "arXiv",
    "version": 1
   }
  },
- "updated_at": "2026-09-24T13:29:04+00:00"
+ "sources": {
+  "acl": {
+   "checked_at": "2026-09-24T14:32:42+00:00",
+   "commit": "7f31ba6ef2a4bb1663d91c4ea44c64b7b2f6243b"
+  },
+  "openalex": {}
+ },
+ "updated_at": "2026-09-24T14:43:28+00:00"
 }

@@ -13,6 +13,7 @@ dalam rentang `lookback_days`.
 from __future__ import annotations
 
 import os
+import re
 import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timedelta, timezone
@@ -22,6 +23,16 @@ from . import http
 API = "https://api.github.com/repos/acl-org/acl-anthology"
 RAW = "https://raw.githubusercontent.com/acl-org/acl-anthology/{ref}/{path}"
 SITE = "https://aclanthology.org"
+# Naikkan angka ini jika cara penelusuran berubah, supaya rentang `lookback_days`
+# diperiksa ulang dari awal pada jalankan berikutnya.
+STATE_VERSION = 2
+_YEAR_RE = re.compile(r"^data/xml/(\d{4})\.")
+
+
+def collection_year(path: str) -> int:
+    """Tahun kumpulan dari nama berkas ("data/xml/2026.acl.xml" -> 2026), 0 untuk format lama."""
+    match = _YEAR_RE.match(path)
+    return int(match.group(1)) if match else 0
 
 
 def _headers() -> dict[str, str]:
@@ -120,14 +131,20 @@ def fetch_candidates(config: dict, state: dict, now: datetime | None = None, log
     lookback = int(config.get("lookback_days", 120))
     oldest = now - timedelta(days=lookback)
     since = oldest
-    if state.get("checked_at"):
+    if state.get("checked_at") and state.get("version") == STATE_VERSION:
         # Tumpang tindih dua hari supaya commit yang tertunda tidak terlewat.
         since = max(oldest, datetime.fromisoformat(state["checked_at"]) - timedelta(days=2))
-    files, head = changed_xml_files(since, int(config.get("max_commits", 300)), log=log)
+    changed, head = changed_xml_files(since, int(config.get("max_commits", 300)), log=log)
+    # Volume baru hampir selalu masuk ke kumpulan tahun berjalan atau tahun lalu.
+    # Berkas lama (misalnya P19.xml) sering ikut berubah karena perbaikan massal,
+    # jadi dilewati supaya tidak menghabiskan jatah unduhan.
+    min_year = oldest.year - 1
+    files = sorted((f for f in changed if collection_year(f) >= min_year), key=lambda f: (collection_year(f), f), reverse=True)
     max_files = int(config.get("max_files_per_run", 150))
+    log(f"  [ACL] {len(changed)} berkas berubah, {len(files)} dari kumpulan {min_year} ke atas")
     if len(files) > max_files:
-        log(f"  [ACL] {len(files)} berkas berubah, hanya {max_files} terbaru yang diproses")
-        files = sorted(files, reverse=True)[:max_files]
+        log(f"  [ACL] hanya {max_files} berkas terbaru yang diproses")
+        files = files[:max_files]
     found: dict[str, dict] = {}
     failures = 0
     for path in files:
@@ -144,6 +161,7 @@ def fetch_candidates(config: dict, state: dict, now: datetime | None = None, log
         for p in papers:
             found[p["id"]] = p
     state["checked_at"] = now.isoformat(timespec="seconds")
+    state["version"] = STATE_VERSION
     if head:
         state["commit"] = head
     log(f"  [ACL] {len(files)} berkas diperiksa, {len(found)} makalah dari volume baru")

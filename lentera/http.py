@@ -15,11 +15,12 @@ USER_AGENT = f"lentera-riset/{__version__} (+https://github.com/FeliksMakarios/l
 
 
 class HttpError(Exception):
-    def __init__(self, status: int, url: str, body: str = ""):
+    def __init__(self, status: int, url: str, body: str = "", headers=None):
         super().__init__(f"HTTP {status} untuk {url}: {body[:200]}")
         self.status = status
         self.url = url
         self.body = body
+        self.headers = dict(headers or {})
 
 
 def _retry_after(headers) -> float | None:
@@ -64,9 +65,10 @@ def request(
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", "replace")
             if exc.code < 500 and exc.code not in retry_statuses:
-                raise HttpError(exc.code, url, body) from exc
-            last_error = HttpError(exc.code, url, body)
-            wait = max(wait, _retry_after(exc.headers) or 0)
+                raise HttpError(exc.code, url, body, exc.headers) from exc
+            last_error = HttpError(exc.code, url, body, exc.headers)
+            # Retry-After dipatuhi, tetapi dibatasi 2 menit supaya run tidak menggantung.
+            wait = max(wait, min(_retry_after(exc.headers) or 0, 120))
         except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             last_error = exc
         if attempt < retries - 1:

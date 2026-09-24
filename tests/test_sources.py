@@ -77,8 +77,41 @@ class AclFetchTest(unittest.TestCase):
             return []
 
         with mock.patch.object(http, "get_json", side_effect=fake):
-            acl.fetch_candidates({"lookback_days": 120}, {"checked_at": "2026-09-20T00:00:00+00:00"}, NOW, log=lambda *_: None)
+            acl.fetch_candidates({"lookback_days": 120},
+                                 {"checked_at": "2026-09-20T00:00:00+00:00", "version": acl.STATE_VERSION},
+                                 NOW, log=lambda *_: None)
         self.assertIn("since=2026-09-18T00%3A00%3A00Z", seen[0])
+
+    def test_old_state_version_rescans_full_lookback(self):
+        seen = []
+
+        def fake(url, **kwargs):
+            seen.append(url)
+            return []
+
+        with mock.patch.object(http, "get_json", side_effect=fake):
+            acl.fetch_candidates({"lookback_days": 120}, {"checked_at": "2026-09-20T00:00:00+00:00"}, NOW, log=lambda *_: None)
+        self.assertIn("since=2026-05-27T00%3A00%3A00Z", seen[0])
+
+    def test_old_style_and_old_year_files_are_skipped_and_newest_first(self):
+        files = ["data/xml/W19.xml", "data/xml/P19.xml", "data/xml/2019.acl.xml",
+                 "data/xml/2025.emnlp.xml", "data/xml/2026.acl.xml", "data/xml/2026.wildre.xml"]
+        raw = []
+
+        def fake_request(url, **kwargs):
+            raw.append(url.rsplit("/", 1)[-1])
+            return b'<collection id="2026.x"></collection>'
+
+        state = {}
+        with mock.patch.object(acl, "changed_xml_files", return_value=(files, "h")), \
+             mock.patch.object(http, "request", side_effect=fake_request):
+            acl.fetch_candidates({"lookback_days": 120, "max_files_per_run": 2}, state, NOW, log=lambda *_: None)
+        self.assertEqual(raw, ["2026.wildre.xml", "2026.acl.xml"])
+        self.assertEqual(state["version"], acl.STATE_VERSION)
+
+    def test_collection_year(self):
+        self.assertEqual(acl.collection_year("data/xml/2026.acl.xml"), 2026)
+        self.assertEqual(acl.collection_year("data/xml/P19.xml"), 0)
 
 
 WORK = {
@@ -153,6 +186,50 @@ class OpenAlexTest(unittest.TestCase):
         self.assertIn("api_key=secret-key", calls[0])
         self.assertFalse(any("secret-key" in line for line in logs))
         self.assertIn("checked_at", state)
+
+
+class OpenAlex429Test(unittest.TestCase):
+    def test_short_retry_after_is_retried(self):
+        calls = []
+
+        def fake(url, **kwargs):
+            calls.append(url)
+            if len(calls) == 1:
+                raise http.HttpError(429, url, '{"message": "busy"}', {"Retry-After": "5"})
+            return {"results": []}
+
+        sleeps = []
+        with mock.patch.object(http, "get_json", side_effect=fake):
+            self.assertEqual(openalex.get_page("u", sleep=sleeps.append), {"results": []})
+        self.assertEqual(sleeps, [6.0])
+
+    def test_long_or_missing_retry_after_stops(self):
+        err = http.HttpError(429, "u", '{"message": "Daily credits exhausted"}',
+                             {"Retry-After": "33710", "X-RateLimit-Remaining": "0"})
+        with mock.patch.object(http, "get_json", side_effect=err):
+            with self.assertRaises(openalex.QuotaExhausted) as ctx:
+                openalex.get_page("u", sleep=lambda *_: None)
+        self.assertIn("Daily credits exhausted", str(ctx.exception))
+        self.assertIn("x-ratelimit-remaining=0", str(ctx.exception))
+
+    def test_quota_exhausted_stops_all_topics_and_hides_key(self):
+        calls = []
+        logs = []
+
+        def fake(url, **kwargs):
+            calls.append(url)
+            if "/rate-limit" in url:
+                return {"api_key": "secret-key", "credits_remaining": 0}
+            raise http.HttpError(429, url, '{"message": "Anonymous search is rate-limited, use a free API key"}')
+
+        with mock.patch.dict("os.environ", {"OPENALEX_API_KEY": "secret-key"}), \
+             mock.patch.object(http, "get_json", side_effect=fake), mock.patch("time.sleep"):
+            found = openalex.fetch_candidates(CONFIG, {}, NOW, log=logs.append)
+        self.assertEqual(found, {})
+        self.assertEqual(sum(1 for u in calls if "/works?" in u), 1)
+        self.assertTrue(any("Anonymous search" in line for line in logs))
+        self.assertTrue(any("credits_remaining" in line for line in logs))
+        self.assertFalse(any("secret-key" in line for line in logs))
 
 
 class MergeTest(unittest.TestCase):

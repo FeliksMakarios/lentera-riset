@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import time
 
 from . import http
 
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+MODELS_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 PROMPT = """You are an expert NLP researcher writing for Indonesian researchers and students.
 Summarise the arXiv paper below using ONLY the information in its title, abstract and
@@ -79,11 +81,23 @@ RESPONSE_SCHEMA = {
 
 
 class QuotaExceeded(Exception):
-    """Kuota gratis habis untuk saat ini; sisa makalah diringkas pada jalankan berikutnya."""
+    """Kuota harian semua model habis; sisa makalah diringkas pada jalankan berikutnya."""
 
 
 class ModelUnavailable(Exception):
-    pass
+    """Model tidak ada (404) atau sudah tidak dilayani."""
+
+
+class ModelBusy(Exception):
+    """Model sedang sibuk (503) walaupun sudah dicoba ulang."""
+
+
+class RateLimited(Exception):
+    """Kena batas permintaan (429). `daily` berarti kuota harian model ini habis."""
+
+    def __init__(self, message: str, daily: bool):
+        super().__init__(message)
+        self.daily = daily
 
 
 def validate(summary: dict) -> dict:
@@ -121,17 +135,22 @@ def call_gemini(model: str, api_key: str, paper: dict) -> dict:
         },
     }
     try:
+        # Status 5xx (misalnya 503 "high demand") dicoba ulang dengan jeda 10, 20, 40 detik.
         data = http.post_json(
             API_URL.format(model=model),
             payload,
             headers={"x-goog-api-key": api_key},
             timeout=120,
+            retries=4,
+            backoff=10,
         )
     except http.HttpError as exc:
         if exc.status == 429:
-            raise QuotaExceeded(str(exc)) from exc
+            raise RateLimited(str(exc), daily="PerDay" in exc.body) from exc
         if exc.status == 404:
             raise ModelUnavailable(model) from exc
+        if exc.status >= 500:
+            raise ModelBusy(model) from exc
         raise
     try:
         text = "".join(p.get("text", "") for p in data["candidates"][0]["content"]["parts"])
@@ -140,21 +159,79 @@ def call_gemini(model: str, api_key: str, paper: dict) -> dict:
     return validate(json.loads(text))
 
 
+def list_flash_models(api_key: str) -> list[str]:
+    """Cari model Flash yang tersedia untuk kunci ini, dipakai jika semua model di konfigurasi hilang."""
+    data = http.get_json(f"{MODELS_URL}?pageSize=200", headers={"x-goog-api-key": api_key})
+    names = []
+    for m in data.get("models", []):
+        name = m.get("name", "").removeprefix("models/")
+        if (
+            "flash" in name
+            and "generateContent" in m.get("supportedGenerationMethods", [])
+            and not any(x in name for x in ("image", "tts", "audio", "live", "embedding", "preview", "exp"))
+        ):
+            names.append(name)
+    # Utamakan alias "-latest", lalu bukan "lite", lalu versi terbaru.
+    names.sort(reverse=True)
+    return sorted(names, key=lambda n: (not n.endswith("-latest"), "lite" in n))
+
+
 class Summarizer:
-    def __init__(self, models: list[str], api_key: str | None = None):
+    def __init__(self, models: list[str], api_key: str | None = None, log=print, sleep=time.sleep):
         self.api_key = api_key if api_key is not None else os.environ.get("GEMINI_API_KEY", "")
         self.models = list(models)
+        self.log = log
+        self.sleep = sleep
+        self._discovered = False
 
     @property
     def enabled(self) -> bool:
         return bool(self.api_key)
 
+    def _discover(self) -> None:
+        self._discovered = True
+        try:
+            found = list_flash_models(self.api_key)
+        except Exception as exc:
+            self.log(f"  [Gemini] gagal mencari daftar model: {exc}")
+            return
+        self.models = found
+        self.log(f"  [Gemini] model di konfigurasi tidak tersedia, memakai: {', '.join(found[:3]) or '-'}")
+
     def summarize(self, paper: dict) -> tuple[dict, str]:
-        """Kembalikan (ringkasan, nama model). Model yang tidak tersedia dibuang dari daftar."""
-        while self.models:
-            model = self.models[0]
+        """Kembalikan (ringkasan, nama model).
+
+        - Model 404 dibuang; jika semua habis, daftar model dicari otomatis sekali.
+        - Model sibuk (503) atau kena batas per menit: coba model berikutnya untuk makalah ini.
+          Batas per menit juga diberi jeda 60 detik sebelum makalah berikutnya.
+        - Kuota harian habis: model itu dibuang untuk sisa jalankan ini.
+        Melempar QuotaExceeded jika tidak ada model yang bisa dipakai lagi.
+        """
+        busy = 0
+        i = 0
+        while True:
+            if not self.models and not self._discovered:
+                self._discover()
+            if not self.models:
+                raise QuotaExceeded("tidak ada model Gemini yang bisa dipakai")
+            if i >= len(self.models):
+                raise ModelBusy(f"semua model sibuk ({busy} percobaan)")
+            model = self.models[i]
             try:
                 return call_gemini(model, self.api_key, paper), model
             except ModelUnavailable:
-                self.models.pop(0)
-        raise ModelUnavailable("tidak ada model Gemini yang tersedia")
+                self.log(f"  [Gemini] model {model} tidak tersedia")
+                self.models.pop(i)
+            except RateLimited as exc:
+                if exc.daily:
+                    self.log(f"  [Gemini] kuota harian {model} habis")
+                    self.models.pop(i)
+                else:
+                    self.log(f"  [Gemini] batas per menit {model}, jeda 60 detik")
+                    self.sleep(60)
+                    busy += 1
+                    i += 1
+            except ModelBusy:
+                self.log(f"  [Gemini] model {model} sedang sibuk")
+                busy += 1
+                i += 1

@@ -119,3 +119,26 @@ class FetchCandidatesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SignalsTest(unittest.TestCase):
+    def test_aggregator_repos_are_ignored(self):
+        from lentera import signals
+
+        data = {"total_count": 3, "items": [
+            {"full_name": "Tavish9/awesome-daily-AI-arxiv", "description": "", "stargazers_count": 120, "html_url": "a"},
+            {"full_name": "someone/agent-arXiv-daily", "description": "", "stargazers_count": 10, "html_url": "b"},
+            {"full_name": "lab/nusa-mt", "description": "Official code for the paper", "stargazers_count": 7, "html_url": "c"},
+        ]}
+        with mock.patch.object(http, "get_json", return_value=data):
+            out = signals.github_repos("2609.00001")
+        self.assertEqual(out["stars"], 7)
+        self.assertEqual(out["repos"], 1)
+        self.assertEqual(out["name"], "lab/nusa-mt")
+
+    def test_only_aggregators_means_no_signal(self):
+        from lentera import signals
+
+        data = {"items": [{"full_name": "x/awesome-papers", "description": "", "stargazers_count": 99}]}
+        with mock.patch.object(http, "get_json", return_value=data):
+            self.assertIsNone(signals.github_repos("2609.00001"))

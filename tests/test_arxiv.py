@@ -40,8 +40,10 @@ class QueryTest(unittest.TestCase):
         topic = CONFIG.topic("low-resource")
         q = arxiv.build_query(topic, ["cs.CL", "cs.AI"])
         self.assertTrue(q.startswith("(cat:cs.CL OR cat:cs.AI) AND ("))
-        self.assertIn('abs:"low-resource"', q)
-        self.assertIn('abs:"endangered language"', q)
+        self.assertIn('abs:"low-resource language"', q)
+        self.assertIn('abs:"low-resource languages"', q)
+        self.assertIn('abs:"endangered languages"', q)
+        self.assertNotIn('abs:"low-resource ASRs"', q)
 
     def test_query_url(self):
         url = arxiv.query_url("cat:cs.CL", 50)

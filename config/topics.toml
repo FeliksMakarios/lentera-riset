@@ -18,7 +18,7 @@ categories = ["cs.CL", "cs.AI", "cs.LG", "cs.SD", "eess.AS"]
 # Jumlah hasil per kueri topik (arXiv menyarankan tidak lebih dari 2000).
 max_results_per_topic = 100
 # Percobaan ulang saat API arXiv menolak (406/429/503) dan jeda awalnya (detik), naik dua kali lipat.
-api_retries = 5
+api_retries = 3
 api_backoff_seconds = 15
 # Jeda antarpermintaan ke arXiv, dalam detik (aturan arXiv: minimal 3 detik).
 request_delay_seconds = 3.5
@@ -36,15 +36,21 @@ half_life_days = 14
 max_per_run = 25
 # Jeda antarpanggilan Gemini, dalam detik (kuota gratis dibatasi per menit).
 request_delay_seconds = 7
-# Model dicoba berurutan; model berikutnya dipakai jika model sebelumnya tidak tersedia.
-models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.5-flash-lite"]
+# Model dicoba berurutan; model berikutnya dipakai jika model sebelumnya tidak ada,
+# sedang sibuk, atau kuotanya habis. Alias "-latest" selalu menunjuk versi terbaru.
+# Jika semuanya tidak tersedia, daftar model Flash dicari otomatis.
+models = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"]
 
 # ---------------------------------------------------------------------------
 # Topik. `weight` menentukan seberapa besar satu kata kunci menambah skor
 # relevansi. Kata kunci dicocokkan pada judul dan abstrak, tanpa membedakan
 # huruf besar dan kecil, dan harus berupa kata utuh.
+# Kata kunci juga cocok dengan bentuk jamaknya ("language" = "languages"), dan
+# spasi setara dengan tanda hubung ("low resource" = "low-resource").
 # `query = false` berarti kata kunci hanya dipakai untuk penilaian, tidak
 # untuk kueri ke arXiv (berguna untuk kata yang terlalu umum).
+# `core = false` berarti topik pendukung: hanya menambah skor jika makalah juga
+# cocok dengan minimal satu topik inti. Bawaannya sama dengan nilai `query`.
 # ---------------------------------------------------------------------------
 
 [[topics]]
@@ -94,12 +100,17 @@ label_id = "Bahasa berdaya sumber rendah"
 label_en = "Low-resource languages"
 weight = 2.0
 query = true
+# Frasa "low-resource" saja sering berarti sumber daya komputasi yang terbatas,
+# jadi di sini yang dipakai adalah frasa yang jelas merujuk ke bahasa.
 keywords = [
-  "low-resource", "low resource", "under-resourced", "underresourced",
-  "resource-poor", "resource-scarce", "extremely low-resource",
-  "endangered language", "endangered languages", "indigenous language",
-  "indigenous languages", "language documentation", "underrepresented languages",
-  "regional languages", "local languages", "minority languages",
+  "low-resource language", "low resource language", "low-resourced language",
+  "under-resourced language", "resource-poor language", "resource-scarce language",
+  "less-resourced language", "lesser-resourced language", "extremely low-resource language",
+  "low-resource machine translation", "low-resource translation", "low-resource NLP",
+  "low-resource speech", "low-resource ASR", "low-resource speech recognition",
+  "endangered language", "indigenous language", "language documentation",
+  "underrepresented language", "under-represented language", "regional language",
+  "minority language", "language revitalization",
 ]
 
 [[topics]]
@@ -109,8 +120,9 @@ label_en = "Multilingual and cross-lingual"
 weight = 0.75
 query = false
 keywords = [
+  "low-resource", "under-resourced", "data-scarce", "few-shot",
   "multilingual", "cross-lingual", "crosslingual", "code-switching",
   "code-mixed", "code-mixing", "transliteration", "language transfer",
-  "machine translation", "parallel corpus", "dialect", "dialects",
+  "machine translation", "parallel corpus", "dialect",
   "Universal Dependencies", "treebank",
 ]

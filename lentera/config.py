@@ -18,6 +18,7 @@ class Topic:
     weight: float
     keywords: list[str]
     query: bool = True
+    core: bool = True
 
 
 @dataclass
@@ -43,6 +44,7 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
             weight=float(t["weight"]),
             keywords=list(t["keywords"]),
             query=bool(t.get("query", True)),
+            core=bool(t.get("core", t.get("query", True))),
         )
         for t in raw.get("topics", [])
     ]

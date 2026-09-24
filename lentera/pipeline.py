@@ -93,6 +93,8 @@ def summarize_pending(
     pending.sort(key=lambda p: p.get("score", 0), reverse=True)
     limit = int(config.summaries.get("max_per_run", 25))
     delay = float(config.summaries.get("request_delay_seconds", 7))
+    max_busy = int(config.summaries.get("max_busy_papers", 4))
+    busy_wait = float(config.summaries.get("busy_wait_seconds", 60))
     done = 0
     busy_streak = 0
     for i, paper in enumerate(pending[:limit]):
@@ -107,9 +109,11 @@ def summarize_pending(
         except ModelBusy as exc:
             busy_streak += 1
             log(f"  [Gemini] {paper['id']} dilewati: {exc}")
-            if busy_streak >= 2:
+            if busy_streak >= max_busy:
                 log("  [Gemini] layanan sedang sibuk, sisa makalah diringkas pada jalankan berikutnya")
                 break
+            # Lonjakan permintaan biasanya reda dalam hitungan menit.
+            time.sleep(busy_wait)
             continue
         except Exception as exc:
             log(f"  [Gemini] {paper['id']} gagal: {exc}")
@@ -164,9 +168,13 @@ def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, 
     rescore(config, papers, now)
 
     if collect_signals:
+        # Sinyal hanya diperbarui untuk makalah yang masih baru; untuk makalah lama
+        # sinyalnya jarang berubah, sementara pencarian GitHub dibatasi 30 kali per menit.
+        signal_days = float(config.signals.get("lookback_days", 30))
         recent = [
             p for p in papers.values()
-            if rank.age_days(p, now) <= config.lookback_days(p.get("source", "arxiv"))
+            if p.get("relevance", 0) >= float(config.ranking.get("min_relevance", 2.0))
+            and rank.age_days(p, now) <= min(signal_days, config.lookback_days(p.get("source", "arxiv")))
         ]
         log(f"Mengumpulkan sinyal popularitas untuk {len(recent)} makalah...")
         for pid, sig in signals.collect(recent, log=log).items():

@@ -161,7 +161,8 @@ class OpenAlexTest(unittest.TestCase):
     def test_filter(self):
         f = openalex.build_filter(CONFIG.topic("low-resource"), "2026-09-01")
         self.assertIn('title_and_abstract.search:("low-resource language" OR ', f)
-        self.assertIn("from_created_date:2026-09-01", f)
+        self.assertIn("from_publication_date:2026-09-01", f)
+        self.assertNotIn("from_created_date", f)
         self.assertIn("topics.field.id:17", f)
 
     def test_skipped_without_key(self):

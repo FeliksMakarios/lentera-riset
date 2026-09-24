@@ -266,15 +266,21 @@ class Summarizer:
     def enabled(self) -> bool:
         return bool(self.api_key)
 
-    def _discover(self) -> None:
+    def _discover(self) -> int:
+        """Tambahkan model Flash lain yang tersedia ke akhir daftar (sekali per jalankan).
+
+        Kembalikan jumlah model baru yang ditambahkan.
+        """
         self._discovered = True
         try:
             found = list_flash_models(self.api_key)
         except Exception as exc:
             self.log(f"  [Gemini] gagal mencari daftar model: {exc}")
-            return
-        self.models = found
-        self.log(f"  [Gemini] model di konfigurasi tidak tersedia, memakai: {', '.join(found[:3]) or '-'}")
+            return 0
+        extra = [m for m in found if m not in self.models][:3]
+        self.models.extend(extra)
+        self.log(f"  [Gemini] model cadangan ditambahkan: {', '.join(extra) or '-'}")
+        return len(extra)
 
     def summarize(self, paper: dict, pdf: bytes | None = None) -> tuple[dict, str]:
         """Kembalikan (ringkasan, nama model). Kolom `source` di ringkasan berisi
@@ -282,8 +288,9 @@ class Summarizer:
 
         - PDF ditolak model (400): ulangi dengan abstrak saja.
 
-        - Model 404 dibuang; jika semua habis, daftar model dicari otomatis sekali.
+        - Model 404 dibuang.
         - Model sibuk (503) atau kena batas per menit: coba model berikutnya untuk makalah ini.
+        - Jika semua model habis atau sibuk, model Flash lain dicari otomatis (sekali per jalankan).
           Batas per menit juga diberi jeda 60 detik sebelum makalah berikutnya.
         - Kuota harian habis: model itu dibuang untuk sisa jalankan ini.
         Melempar QuotaExceeded jika tidak ada model yang bisa dipakai lagi.
@@ -291,8 +298,8 @@ class Summarizer:
         busy = 0
         i = 0
         while True:
-            if not self.models and not self._discovered:
-                self._discover()
+            if i >= len(self.models) and not self._discovered and self._discover():
+                continue
             if not self.models:
                 raise QuotaExceeded("tidak ada model Gemini yang bisa dipakai")
             if i >= len(self.models):

@@ -40,6 +40,10 @@ enabled = true
 lookback_days = 60
 max_results_per_topic = 200
 
+[signals]
+# Sinyal keramaian hanya diperbarui untuk makalah yang terbit dalam rentang ini.
+lookback_days = 30
+
 [ranking]
 # Makalah baru disimpan jika skor relevansinya mencapai ambang ini.
 min_relevance = 2.0
@@ -48,7 +52,7 @@ half_life_days = 14
 
 [summaries]
 # Jumlah maksimum ringkasan baru per sekali jalan, supaya kuota gratis tidak habis.
-max_per_run = 20
+max_per_run = 40
 # Baca isi lengkap makalah (PDF akses terbuka). Jika PDF tidak tersedia,
 # ringkasan dibuat dari abstrak.
 use_full_text = true
@@ -59,7 +63,11 @@ request_delay_seconds = 7
 # Model dicoba berurutan; model berikutnya dipakai jika model sebelumnya tidak ada,
 # sedang sibuk, atau kuotanya habis. Alias "-latest" selalu menunjuk versi terbaru.
 # Jika semuanya tidak tersedia, daftar model Flash dicari otomatis.
-models = ["gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash-lite"]
+models = ["gemini-flash-lite-latest", "gemini-flash-latest"]
+# Jika layanan sibuk (503) untuk semua model, tunggu sekian detik lalu lanjut ke
+# makalah berikutnya; berhenti setelah sekian makalah berturut-turut gagal.
+busy_wait_seconds = 60
+max_busy_papers = 4
 
 # ---------------------------------------------------------------------------
 # Topik. `weight` menentukan seberapa besar satu kata kunci menambah skor

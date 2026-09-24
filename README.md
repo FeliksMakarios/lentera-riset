@@ -63,7 +63,7 @@ python -m http.server -d _site 8000            # buka http://localhost:8000
 
 ## Batasan kuota gratis
 
-- **Gemini**: kuota harian terbatas, jadi maksimal 20 ringkasan baru per hari (bisa diatur di `[summaries]`). Pada versi gratis, Google boleh memakai data permintaan untuk meningkatkan layanannya. Yang dikirim hanya makalah akses terbuka yang memang sudah publik.
+- **Gemini**: kuota harian terbatas, jadi maksimal 40 ringkasan baru per hari (bisa diatur di `[summaries]`). Pada versi gratis, Google boleh memakai data permintaan untuk meningkatkan layanannya. Yang dikirim hanya makalah akses terbuka yang memang sudah publik.
 - **OpenAlex**: 100.000 kredit per hari dengan kunci gratis; satu pencarian memakai 10 kredit, dan situs ini hanya memakai beberapa pencarian per hari.
 - **Makalah berbayar** (misalnya sebagian besar makalah IEEE) tidak punya PDF akses terbuka, jadi ringkasannya dibuat dari abstrak.
 - **arXiv**: jeda minimal 3 detik antarpermintaan sudah diterapkan. Saat bebannya tinggi, API arXiv kadang menolak dengan kode 406. Sistem akan mencoba ulang beberapa kali, dan jika tetap ditolak, makalah hari itu tetap masuk lewat umpan RSS.

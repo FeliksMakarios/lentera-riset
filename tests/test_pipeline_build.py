@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 
 from lentera import arxiv, build, pipeline
-from lentera.summarize import QuotaExceeded, validate
+from lentera.summarize import ModelBusy, QuotaExceeded, validate
 from tests.helpers import CONFIG, SUMMARY
 
 FIXTURE = Path(__file__).parent / "fixtures" / "arxiv_sample.xml"
@@ -18,11 +18,15 @@ def candidates():
 
 
 class FakeSummarizer:
-    def __init__(self, fail_after=None):
+    def __init__(self, fail_after=None, busy=False):
         self.calls = 0
         self.fail_after = fail_after
+        self.busy = busy
 
     def summarize(self, paper, pdf=None):
+        if self.busy:
+            self.calls += 1
+            raise ModelBusy("sibuk")
         if self.fail_after is not None and self.calls >= self.fail_after:
             raise QuotaExceeded("habis")
         self.calls += 1
@@ -75,6 +79,20 @@ class PipelineTest(unittest.TestCase):
             pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf)
             self.papers["2609.01234"]["abstract"] += " Revised."
             self.assertEqual(pipeline.summarize_pending(CONFIG, self.papers, FakeSummarizer(), log=lambda *_: None, pdf_fetcher=no_pdf), 1)
+
+    def test_busy_waits_then_stops_after_max_busy_papers(self):
+        papers = {}
+        for i in range(6):
+            cand = copy.deepcopy(candidates()["2609.01234"])
+            cand["id"] = f"2609.0000{i}"
+            cand["title"] = f"Javanese paper {i}"
+            papers[cand["id"]] = {**cand, "relevance": 5, "score": 1, "summary": None}
+        fake = FakeSummarizer(busy=True)
+        with mock.patch("time.sleep") as sleep:
+            done = pipeline.summarize_pending(CONFIG, papers, fake, log=lambda *_: None, pdf_fetcher=no_pdf)
+        self.assertEqual(done, 0)
+        self.assertEqual(fake.calls, CONFIG.summaries["max_busy_papers"])
+        self.assertIn(mock.call(CONFIG.summaries["busy_wait_seconds"]), sleep.call_args_list)
 
     def test_quota_stops_gracefully(self):
         with mock.patch("time.sleep"):
@@ -135,6 +153,28 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(build.date_id("2026-09-18T10:00:00Z"), "18 September 2026")
 
 
+
+
+class SignalWindowTest(unittest.TestCase):
+    def test_only_recent_relevant_papers_get_signals(self):
+        papers = {}
+        pipeline.merge_candidates(CONFIG, papers, candidates(), NOW)
+        old = copy.deepcopy(papers["2609.01234"])
+        old.update(id="acl:old", published="2026-06-01T00:00:00Z", source="acl")
+        papers["acl:old"] = old
+        seen = []
+
+        def fake_collect(ps, log):
+            seen.extend(p["id"] for p in ps)
+            return {}
+
+        with mock.patch("lentera.signals.collect", side_effect=fake_collect), \
+             mock.patch("lentera.store.load", return_value={"papers": papers}), \
+             mock.patch("lentera.store.save"), \
+             mock.patch("lentera.pipeline.datetime") as dt:
+            dt.now.return_value = NOW
+            pipeline.update(CONFIG, fetch=False, summaries=False, log=lambda *_: None)
+        self.assertEqual(seen, ["2609.01234"])
 
 
 class SignalMergeTest(unittest.TestCase):

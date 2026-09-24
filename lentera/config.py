@@ -30,6 +30,7 @@ class Config:
     topics: list[Topic] = field(default_factory=list)
     acl: dict = field(default_factory=dict)
     openalex: dict = field(default_factory=dict)
+    signals: dict = field(default_factory=dict)
 
     def topic(self, topic_id: str) -> Topic | None:
         return next((t for t in self.topics if t.id == topic_id), None)
@@ -68,4 +69,5 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         topics=topics,
         acl=raw.get("acl", {}),
         openalex=raw.get("openalex", {}),
+        signals=raw.get("signals", {}),
     )

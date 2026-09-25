@@ -1,4 +1,4 @@
-"""Pengelompokan makalah per bahasa untuk halaman bahasa.
+"""Pengelompokan makalah per bahasa untuk saringan Bahasa di halaman Makalah.
 
 Bahasa sebuah makalah diambil dari dua sumber:
 1. Nama bahasa (`aliases` di [[languages]]) yang disebut di judul atau abstrak.
@@ -86,7 +86,7 @@ def detect(config: Config, paper: dict) -> tuple[list[str], list[str]]:
 
 
 def group_papers(config: Config, papers: list[dict]) -> dict[str, LanguagePage]:
-    """Halaman bahasa beserta makalahnya (urutan makalah mengikuti `papers`).
+    """Bahasa beserta makalahnya (urutan makalah mengikuti `papers`).
 
     Bahasa di konfigurasi mendapat halaman jika punya minimal satu makalah; bahasa
     lain dari ringkasan Gemini jika punya minimal `auto_language_min_papers` makalah.

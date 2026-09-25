@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from lentera import build, embeddings, http, languages, pipeline
+from lentera import build, embeddings, http, languages, pipeline, tasks
 from lentera.config import ROOT
 from tests.helpers import CONFIG, SUMMARY
 from tests.test_pipeline_build import NOW, candidates
@@ -197,36 +197,105 @@ class Stage2BuildTest(unittest.TestCase):
         self.assertIn("Makalah serupa", html)
         self.assertIn('href="2609.09999.html"', html)
 
-    def test_paper_page_links_topics_and_languages(self):
+    def test_paper_page_links_topics_languages_and_tasks(self):
         html = (self.out / "papers/2609.01234.html").read_text()
-        self.assertIn('href="../topik/indonesia.html"', html)
-        self.assertIn('href="../bahasa/javanese.html"', html)
+        self.assertIn('href="../makalah.html?topik=indonesia"', html)
+        self.assertIn('href="../makalah.html?bahasa=javanese"', html)
+        self.assertIn('href="../makalah.html?tugas=mt"', html)
+        self.assertIn('href="../makalah.html">&larr; Semua makalah', html)
 
-    def test_language_pages(self):
-        index = (self.out / "bahasa/index.html").read_text()
-        self.assertIn("Bahasa Jawa", index)
-        self.assertIn('href="balinese.html"', index)
-        jav = (self.out / "bahasa/javanese.html").read_text()
-        self.assertEqual(jav.count('class="card"'), 2)
-        self.assertIn('href="../papers/2609.01234.html"', jav)
-        self.assertNotIn('id="topic-filter"', (self.out / "topik/indonesia.html").read_text())
-
-    def test_search_index_has_vectors_and_metadata(self):
-        data = json.loads((self.out / "search-index.json").read_text())
-        self.assertEqual(data["model"], CONFIG.embeddings["model"])
-        self.assertEqual(data["dimensions"], 256)
+    def test_catalog_has_facets_and_papers(self):
+        data = json.loads((self.out / "catalog.json").read_text())
+        self.assertEqual(data["languages"]["javanese"]["count"], 2)
+        self.assertIn("balinese", data["languages"])
+        self.assertIn("mt", data["tasks"])
+        self.assertEqual(data["tasks"]["mt"]["group"], "generation")
         item = next(p for p in data["papers"] if p["id"] == "2609.01234")
         self.assertEqual(item["url"], "papers/2609.01234.html")
         self.assertIn("javanese", item["languages"])
-        self.assertNotIn("*", item["tldr"])
-        self.assertEqual(len(base64.b64decode(item["v"])), 256)
-        self.assertIn("javanese", data["languages"])
+        self.assertIn("mt", item["tasks"])
+        self.assertIn("*low-resource*", item["tldr"])
+        self.assertNotIn("*", item["tldr_en"])
+        other = next(p for p in data["papers"] if p["id"] == "2609.09999")
+        self.assertEqual(other["tldr"], "")
+        self.assertTrue(other["snippet"])
+
+    def test_search_index_has_vectors(self):
+        data = json.loads((self.out / "search-index.json").read_text())
+        self.assertEqual(data["model"], CONFIG.embeddings["model"])
+        self.assertEqual(data["dimensions"], 256)
+        self.assertEqual(set(data["vectors"]), {"2609.01234", "2609.09999"})
+        self.assertEqual(len(base64.b64decode(data["vectors"]["2609.01234"])), 256)
+
+    def test_header_has_search_and_four_menu_items(self):
+        html = (self.out / "index.html").read_text()
+        self.assertIn('<form class="site-search" action="cari.html"', html)
+        nav = re.search(r'<nav aria-label="Menu utama">(.*?)</nav>', html).group(1)
+        self.assertEqual(re.findall(r">([^<]+)</a>", nav), ["Beranda", "Makalah", "Tentang", "RSS"])
+        self.assertIn('href="index.html" aria-current="page"', nav)
+        paper = (self.out / "papers/2609.01234.html").read_text()
+        self.assertIn('action="../cari.html"', paper)
+
+    def test_home_trending_and_newest(self):
+        config = copy.deepcopy(CONFIG)
+        config.site = {**CONFIG.site, "trending_count": 1, "newest_per_page": 1}
+        out = Path(tempfile.mkdtemp()) / "site"
+        build.build_site(config, out, {"updated_at": None, "papers": self.papers}, vectors={})
+        html = (out / "index.html").read_text()
+        trending = html[html.index('id="panel-trending"'):html.index('id="panel-newest"')]
+        newest = html[html.index('id="panel-newest"'):]
+        self.assertEqual(trending.count('class="card"'), 1)
+        self.assertIn('class="rank"', trending)
+        self.assertEqual(newest.count('class="card"'), 1)
+        self.assertIn('data-pages="2"', newest)
+
+    def test_about_mentions_inspirations(self):
+        html = (self.out / "tentang.html").read_text()
+        for name in ("Semantic Scholar", "Hugging Face", "Emergent Mind"):
+            self.assertIn(name, html)
 
     def test_search_page_carries_worker_url(self):
         html = (self.out / "cari.html").read_text()
         self.assertIn('data-worker=""', html)
+        self.assertIn('id="filter-waktu"', html)
         self.assertIn('src="assets/search.js"', html)
         env_out = Path(tempfile.mkdtemp()) / "site"
         with mock.patch.dict("os.environ", {"LENTERA_WORKER_URL": "https://w.example.workers.dev/"}):
             build.build_site(CONFIG, env_out, {"updated_at": None, "papers": self.papers}, vectors={})
         self.assertIn('data-worker="https://w.example.workers.dev"', (env_out / "cari.html").read_text())
+        self.assertNotIn("workers.dev", (env_out / "index.html").read_text())
+
+
+class TaskTest(unittest.TestCase):
+    def test_keywords_and_acronyms(self):
+        found = tasks.detect(CONFIG, paper("a", "Whisper ASR for Javanese", "We study speech recognition."))
+        self.assertIn("asr", found)
+        # Singkatan dicocokkan persis: "rag" kecil (kain) tidak dianggap RAG.
+        self.assertNotIn("retrieval", tasks.detect(CONFIG, paper("b", "A rag doll corpus", "")))
+        self.assertIn("retrieval", tasks.detect(CONFIG, paper("c", "RAG for Sundanese", "")))
+
+    def test_title_only_tasks(self):
+        in_abstract = paper("a", "Sentiment analysis of reviews", "We release a new dataset and benchmark.")
+        found = tasks.detect(CONFIG, in_abstract)
+        self.assertIn("sentiment", found)
+        self.assertNotIn("dataset", found)
+        self.assertNotIn("benchmark", found)
+        self.assertIn("dataset", tasks.detect(CONFIG, paper("b", "NusaX: A Parallel Dataset", "")))
+
+
+class SemanticScholarKeyTest(unittest.TestCase):
+    def test_api_key_is_sent_when_available(self):
+        from lentera import signals
+        calls = []
+
+        def fake(url, payload, headers=None, **kw):
+            calls.append(headers)
+            return [{"citationCount": 3, "influentialCitationCount": 1, "url": "u"}]
+
+        with mock.patch.object(http, "post_json", side_effect=fake):
+            with mock.patch.dict("os.environ", {"SEMANTIC_SCHOLAR_API_KEY": "rahasia"}):
+                out = signals.semantic_scholar_batch({"p": "ARXIV:2609.1"})
+            with mock.patch.dict("os.environ", {"SEMANTIC_SCHOLAR_API_KEY": ""}):
+                signals.semantic_scholar_batch({"p": "ARXIV:2609.1"})
+        self.assertEqual(calls, [{"x-api-key": "rahasia"}, None])
+        self.assertEqual(out["p"]["citations"], 3)

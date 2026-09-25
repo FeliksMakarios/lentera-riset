@@ -18,9 +18,9 @@ Situs: <https://feliksmakarios.github.io/lentera-riset/>
 - Ringkasan dwibahasa dari Gemini yang **membaca isi lengkap makalah** (PDF akses terbuka), dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. Jika PDF tidak tersedia, ringkasan dibuat dari abstrak.
 - TL;DR dua kalimat dari abstrak di bawah nama penulis, mirip TL;DR Semantic Scholar.
 - Istilah teknis yang lazim dipertahankan dalam bahasa Inggris dan dicetak miring, disertai glosarium berbahasa Indonesia.
-- Halaman depan dengan urutan "Sedang ramai" dan "Terbaru", saring topik, dan saringan cepat.
-- **Halaman per topik** dan **halaman per bahasa** (misalnya bahasa Jawa, Banjar, Tagalog). Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini.
-- **Pencarian semantik**: pertanyaan dalam bahasa Indonesia atau Inggris dicocokkan dengan makalah berdasarkan kedekatan makna, bukan hanya kesamaan kata. Jika Worker pencarian belum aktif, halaman pencarian memakai kecocokan kata kunci.
+- **Beranda** dengan dua tab: "Sedang ramai" (10 makalah teramai) dan "Terbaru" (7 makalah per halaman). Keduanya diperbarui setiap hari.
+- **Kolom pencarian berdasarkan makna** di bagian atas setiap halaman, seperti di Hugging Face dan Semantic Scholar. Pertanyaan dalam bahasa Indonesia atau Inggris dicocokkan dengan makalah berdasarkan kedekatan makna, bukan hanya kesamaan kata. Hasilnya bisa disaring menurut rentang waktu, topik, dan bahasa. Jika Worker pencarian belum aktif, hasil memakai kecocokan kata kunci.
+- **Halaman Makalah** bergaya halaman Models di Hugging Face: panel kiri berisi saringan **Tugas** (misalnya terjemahan mesin, pengenalan ucapan, analisis sentimen), **Topik**, dan **Bahasa**, masing-masing dengan kolom untuk mencari pilihan. Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini; tugas dikenali dari kata kunci di `[[tasks]]`.
 - **Makalah serupa** di setiap halaman makalah, berdasarkan kedekatan makna judul dan abstrak.
 - Umpan RSS di `feed.xml`.
 
@@ -46,7 +46,8 @@ Pencarian semantik bekerja begini: setiap makalah diubah menjadi vektor makna (e
 
 Tanpa `GEMINI_API_KEY`, situs tetap berjalan dan menampilkan abstrak asli tanpa ringkasan.
 
-5. **Opsional, untuk jurnal seperti IEEE:** buat kunci API OpenAlex gratis di <https://openalex.org/settings/api>, lalu simpan sebagai secret `OPENALEX_API_KEY`. Tanpa kunci ini, sumber OpenAlex dilewati dan situs tetap berjalan dengan arXiv dan ACL Anthology.
+5. **Opsional, untuk jumlah sitasi yang lebih andal:** minta kunci API Semantic Scholar gratis lewat <https://www.semanticscholar.org/product/api#api-key-form>, lalu simpan sebagai secret `SEMANTIC_SCHOLAR_API_KEY`. Tanpa kunci, permintaan memakai jatah bersama yang kadang ditolak saat ramai.
+6. **Opsional, untuk jurnal seperti IEEE:** buat kunci API OpenAlex gratis di <https://openalex.org/settings/api>, lalu simpan sebagai secret `OPENALEX_API_KEY`. Tanpa kunci ini, sumber OpenAlex dilewati dan situs tetap berjalan dengan arXiv dan ACL Anthology.
 
 ### Pencarian semantik (Cloudflare Worker)
 
@@ -69,7 +70,7 @@ Semua topik dan kata kunci ada di [`config/topics.toml`](config/topics.toml). Un
 - `query = false`: kata kunci hanya dipakai untuk penilaian, tidak untuk mencari di arXiv. Cocok untuk kata yang terlalu umum seperti "multilingual".
 - `min_relevance` di bagian `[ranking]`: ambang minimum agar makalah disimpan.
 
-Daftar bahasa untuk halaman bahasa ada di blok `[[languages]]` pada berkas yang sama. Setiap bahasa punya `aliases`, yaitu nama-nama yang dicari di judul dan abstrak. Bahasa lain yang dicatat Gemini sebagai bahasa yang dikaji otomatis mendapat halaman jika muncul di minimal dua makalah (`auto_language_min_papers` di bagian `[search]`).
+Daftar tugas untuk saringan di halaman Makalah ada di blok `[[tasks]]`, dan daftar bahasa ada di blok `[[languages]]` pada berkas yang sama. Setiap bahasa punya `aliases`, yaitu nama-nama yang dicari di judul dan abstrak. Bahasa lain yang dicatat Gemini sebagai bahasa yang dikaji otomatis mendapat halaman jika muncul di minimal dua makalah (`auto_language_min_papers` di bagian `[search]`).
 
 ## Menjalankan secara lokal
 

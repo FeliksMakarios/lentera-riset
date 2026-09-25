@@ -118,11 +118,12 @@ class BuildTest(unittest.TestCase):
     def test_builds_all_pages(self):
         out = self.build(with_summary=True)
         for rel in ["index.html", "tentang.html", "feed.xml", "assets/style.css", "assets/app.js",
-                    "papers/2609.01234.html", ".nojekyll", "cari.html", "search-index.json",
-                    "assets/search.js", "topik/index.html", "topik/indonesia.html",
-                    "bahasa/index.html", "bahasa/javanese.html", "bahasa/sundanese.html"]:
+                    "papers/2609.01234.html", ".nojekyll", "cari.html", "makalah.html",
+                    "catalog.json", "search-index.json", "assets/search.js", "assets/catalog.js"]:
             self.assertTrue((out / rel).exists(), rel)
         self.assertFalse((out / "papers/2609.05555.html").exists())
+        self.assertFalse((out / "topik").exists())
+        self.assertFalse((out / "bahasa").exists())
 
     def test_paper_page_shows_both_languages_and_italic_terms(self):
         html = (self.build(with_summary=True) / "papers/2609.01234.html").read_text()

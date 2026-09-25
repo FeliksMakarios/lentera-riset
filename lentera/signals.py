@@ -55,10 +55,14 @@ def semantic_scholar_batch(refs: dict[str, str]) -> dict[str, dict]:
         "https://api.semanticscholar.org/graph/v1/paper/batch"
         "?fields=citationCount,influentialCitationCount,url"
     )
+    # Kunci API gratis (opsional) memberi jatah permintaan sendiri, sehingga jarang
+    # ditolak (429) seperti saat memakai jatah bersama tanpa kunci.
+    key = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "")
+    headers = {"x-api-key": key} if key else None
     items = list(refs.items())
     for i in range(0, len(items), 500):
         chunk = items[i : i + 500]
-        data = http.post_json(url, {"ids": [s2 for _, s2 in chunk]}, timeout=60)
+        data = http.post_json(url, {"ids": [s2 for _, s2 in chunk]}, headers=headers, timeout=60)
         for (pid, _), item in zip(chunk, data):
             if item:
                 out[pid] = {

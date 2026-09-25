@@ -9,8 +9,12 @@ tagline = "Riset NLP bahasa berdaya sumber rendah dan bahasa Austronesia, diring
 repo_url = "https://github.com/FeliksMakarios/lentera-riset"
 # Alamat situs setelah terbit, dipakai untuk tautan di RSS.
 site_url = "https://feliksmakarios.github.io/lentera-riset"
-# Jumlah makalah maksimum yang ditampilkan di halaman depan.
-max_papers_on_index = 300
+# Beranda: jumlah makalah di tab "Sedang ramai", dan jumlah makalah per halaman
+# di tab "Terbaru".
+trending_count = 10
+newest_per_page = 7
+# Jumlah makalah per halaman di halaman Makalah.
+catalog_per_page = 20
 
 [arxiv]
 # Kategori arXiv yang dipantau.
@@ -112,9 +116,9 @@ worker_url = ""
 # Jumlah makalah serupa di setiap halaman makalah.
 similar_papers = 5
 # Bahasa yang tidak ada di daftar [[languages]] tetapi disebut Gemini sebagai
-# bahasa yang dikaji mendapat halaman sendiri jika muncul di sekian makalah.
+# bahasa yang dikaji menjadi pilihan di saringan Bahasa jika muncul di sekian makalah.
 auto_language_min_papers = 2
-# Bahasa yang tidak dibuatkan halaman (terlalu umum).
+# Bahasa yang tidak dijadikan pilihan saringan (terlalu umum).
 ignore_languages = ["English"]
 
 # ---------------------------------------------------------------------------
@@ -204,11 +208,11 @@ keywords = [
 ]
 
 # ---------------------------------------------------------------------------
-# Bahasa. Setiap bahasa mendapat halaman sendiri yang berisi makalah yang
+# Bahasa, untuk saringan Bahasa di halaman Makalah. Sebuah makalah masuk ke bahasa yang
 # menyebut salah satu `aliases` di judul atau abstrak, atau yang oleh Gemini
 # dicatat sebagai bahasa yang dikaji. Nama yang lebih panjang didahulukan,
 # jadi "Papuan Malay" tidak ikut dihitung sebagai "Malay".
-# Bahasa lain yang disebut Gemini mendapat halaman otomatis (lihat [search]).
+# Bahasa lain yang disebut Gemini ditambahkan otomatis (lihat [search]).
 # ---------------------------------------------------------------------------
 
 [language_groups]
@@ -537,3 +541,213 @@ name_id = "Bahasa Tok Pisin"
 name_en = "Tok Pisin"
 group = "austronesia"
 aliases = ["Tok Pisin"]
+
+# ---------------------------------------------------------------------------
+# Tugas (seperti "Tasks" di Hugging Face), untuk saringan di halaman Makalah.
+# Sebuah tugas cocok jika salah satu `keywords` muncul di judul atau abstrak.
+# `title_only = true` untuk kata yang terlalu umum di abstrak, misalnya
+# "dataset" atau "bias": hanya dicocokkan di judul. Singkatan huruf besar
+# (misalnya "ASR" atau "NER") dicocokkan persis, termasuk huruf besarnya.
+# ---------------------------------------------------------------------------
+
+[task_groups]
+text = "Analisis teks"
+generation = "Terjemahan dan pembangkitan"
+speech = "Ucapan dan modalitas lain"
+language = "Struktur dan variasi bahasa"
+resources = "Sumber daya, evaluasi, dan model"
+
+[[tasks]]
+id = "sentiment"
+name = "Analisis sentimen"
+group = "text"
+keywords = ["sentiment analysis", "sentiment classification", "opinion mining", "aspect-based sentiment", "sentiment"]
+
+[[tasks]]
+id = "emotion"
+name = "Deteksi emosi"
+group = "text"
+keywords = ["emotion recognition", "emotion classification", "emotion detection"]
+
+[[tasks]]
+id = "ner"
+name = "Pengenalan entitas bernama (NER)"
+group = "text"
+keywords = ["named entity recognition", "NER", "entity linking", "entity extraction"]
+
+[[tasks]]
+id = "text-classification"
+name = "Klasifikasi teks"
+group = "text"
+keywords = ["text classification", "topic classification", "document classification", "intent classification", "intent detection"]
+
+[[tasks]]
+id = "hate-speech"
+name = "Deteksi ujaran kebencian"
+group = "text"
+keywords = ["hate speech", "offensive language", "toxic language", "abusive language", "cyberbullying"]
+
+[[tasks]]
+id = "misinformation"
+name = "Deteksi hoaks dan misinformasi"
+group = "text"
+keywords = ["fake news", "hoax", "misinformation", "disinformation", "fact-checking", "clickbait"]
+
+[[tasks]]
+id = "qa"
+name = "Tanya jawab"
+group = "text"
+keywords = ["question answering", "reading comprehension"]
+
+[[tasks]]
+id = "retrieval"
+name = "Temu kembali informasi"
+group = "text"
+keywords = ["information retrieval", "retrieval-augmented", "RAG", "semantic search", "dense retrieval", "cross-lingual retrieval"]
+
+[[tasks]]
+id = "embedding"
+name = "Representasi dan embedding"
+group = "text"
+keywords = ["word embedding", "sentence embedding", "embedding model", "representation learning"]
+
+[[tasks]]
+id = "mt"
+name = "Terjemahan mesin"
+group = "generation"
+keywords = ["machine translation", "NMT", "translation quality", "post-editing", "translation model", "translation system"]
+
+[[tasks]]
+id = "summarization"
+name = "Peringkasan teks"
+group = "generation"
+keywords = ["summarization", "summarisation"]
+
+[[tasks]]
+id = "generation"
+name = "Pembangkitan teks"
+group = "generation"
+keywords = ["text generation", "natural language generation", "story generation", "data-to-text", "paraphrase generation"]
+
+[[tasks]]
+id = "dialogue"
+name = "Dialog dan chatbot"
+group = "generation"
+keywords = ["dialogue system", "dialog system", "chatbot", "conversational agent", "task-oriented dialogue"]
+
+[[tasks]]
+id = "simplification"
+name = "Penyederhanaan teks"
+group = "generation"
+keywords = ["text simplification", "readability"]
+
+[[tasks]]
+id = "normalization"
+name = "Normalisasi teks dan transliterasi"
+group = "generation"
+keywords = ["transliteration", "text normalization", "spelling correction", "spell checker", "diacritic restoration", "diacritization", "grammatical error correction"]
+
+[[tasks]]
+id = "asr"
+name = "Pengenalan ucapan (ASR)"
+group = "speech"
+keywords = ["speech recognition", "ASR", "speech-to-text", "speech transcription"]
+
+[[tasks]]
+id = "tts"
+name = "Sintesis ucapan (TTS)"
+group = "speech"
+keywords = ["text-to-speech", "TTS", "speech synthesis"]
+
+[[tasks]]
+id = "speech-translation"
+name = "Terjemahan ucapan"
+group = "speech"
+keywords = ["speech translation", "speech-to-speech"]
+
+[[tasks]]
+id = "spoken"
+name = "Pemahaman bahasa lisan"
+group = "speech"
+keywords = ["spoken language understanding", "keyword spotting", "speaker identification", "speech emotion"]
+
+[[tasks]]
+id = "sign"
+name = "Bahasa isyarat"
+group = "speech"
+keywords = ["sign language"]
+
+[[tasks]]
+id = "ocr"
+name = "OCR dan pengenalan tulisan"
+group = "speech"
+keywords = ["OCR", "optical character recognition", "handwriting recognition", "handwritten text"]
+
+[[tasks]]
+id = "langid"
+name = "Identifikasi bahasa"
+group = "language"
+keywords = ["language identification", "language detection", "LID"]
+
+[[tasks]]
+id = "code-switching"
+name = "Alih kode (code-switching)"
+group = "language"
+keywords = ["code-switching", "code-mixing", "code-mixed", "code-switched"]
+
+[[tasks]]
+id = "morphology"
+name = "Morfologi dan tokenisasi"
+group = "language"
+keywords = ["morphology", "morphological", "tokenization", "tokenizer", "subword", "stemming", "stemmer", "lemmatization", "word segmentation"]
+
+[[tasks]]
+id = "syntax"
+name = "Penandaan kelas kata dan parsing"
+group = "language"
+keywords = ["part-of-speech", "POS tagging", "POS tagger", "dependency parsing", "constituency parsing", "syntactic parsing", "treebank", "Universal Dependencies"]
+
+[[tasks]]
+id = "dialect"
+name = "Dialek dan variasi bahasa"
+group = "language"
+keywords = ["dialect", "dialectal", "language variety", "language varieties"]
+
+[[tasks]]
+id = "documentation"
+name = "Dokumentasi dan revitalisasi bahasa"
+group = "language"
+keywords = ["language documentation", "endangered language", "language revitalization", "language revitalisation", "fieldwork"]
+
+[[tasks]]
+id = "dataset"
+name = "Korpus dan dataset"
+group = "resources"
+title_only = true
+keywords = ["dataset", "corpus", "corpora", "treebank", "lexicon", "parallel data", "annotated"]
+
+[[tasks]]
+id = "benchmark"
+name = "Benchmark dan evaluasi"
+group = "resources"
+title_only = true
+keywords = ["benchmark", "benchmarking", "evaluation", "evaluating", "leaderboard"]
+
+[[tasks]]
+id = "adaptation"
+name = "Adaptasi model bahasa"
+group = "resources"
+keywords = ["fine-tuning", "continued pretraining", "continual pre-training", "instruction tuning", "LoRA", "vocabulary expansion", "language adaptation", "cross-lingual transfer", "transfer learning"]
+
+[[tasks]]
+id = "reasoning"
+name = "Penalaran model bahasa"
+group = "resources"
+keywords = ["reasoning", "chain-of-thought", "mathematical reasoning"]
+
+[[tasks]]
+id = "bias"
+name = "Bias, keadilan, dan keamanan"
+group = "resources"
+title_only = true
+keywords = ["bias", "fairness", "stereotype", "stereotypes", "safety", "jailbreak"]

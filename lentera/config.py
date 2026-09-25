@@ -31,6 +31,17 @@ class Language:
 
 
 @dataclass
+class Task:
+    id: str
+    name: str
+    group: str
+    keywords: list[str]
+    # Hanya dicocokkan di judul, untuk kata yang terlalu umum di abstrak
+    # (misalnya "dataset" atau "bias").
+    title_only: bool = False
+
+
+@dataclass
 class Config:
     site: dict
     arxiv: dict
@@ -44,6 +55,8 @@ class Config:
     search: dict = field(default_factory=dict)
     language_groups: dict = field(default_factory=dict)
     languages: list[Language] = field(default_factory=list)
+    task_groups: dict = field(default_factory=dict)
+    tasks: list[Task] = field(default_factory=list)
 
     def topic(self, topic_id: str) -> Topic | None:
         return next((t for t in self.topics if t.id == topic_id), None)
@@ -84,6 +97,18 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         )
         for l in raw.get("languages", [])
     ]
+    tasks = [
+        Task(
+            id=t["id"],
+            name=t["name"],
+            group=t.get("group", "other"),
+            keywords=list(t["keywords"]),
+            title_only=bool(t.get("title_only", False)),
+        )
+        for t in raw.get("tasks", [])
+    ]
+    if len({t.id for t in tasks}) != len(tasks):
+        raise ValueError("ID tugas di config/topics.toml harus unik")
     lang_ids = [l.id for l in languages]
     if len(lang_ids) != len(set(lang_ids)):
         raise ValueError("ID bahasa di config/topics.toml harus unik")
@@ -100,4 +125,6 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         search=raw.get("search", {}),
         language_groups=raw.get("language_groups", {}),
         languages=languages,
+        task_groups=raw.get("task_groups", {}),
+        tasks=tasks,
     )

@@ -89,6 +89,34 @@ models = ["gemini-flash-lite-latest", "gemini-flash-latest"]
 busy_wait_seconds = 60
 max_busy_papers = 4
 
+[embeddings]
+# Vektor makna (embedding) makalah untuk pencarian semantik dan "makalah serupa".
+# Model dan dimensi harus sama dengan EMBED_MODEL dan EMBED_DIMENSIONS di
+# worker/wrangler.toml. Jika diubah, semua vektor dibuat ulang.
+enabled = true
+model = "gemini-embedding-001"
+dimensions = 256
+# Teks yang diubah menjadi vektor: judul dan abstrak, dipotong sepanjang ini.
+max_chars = 1200
+# Kuota gratis dibatasi per menit, jadi makalah dikirim per kelompok dengan jeda.
+batch_size = 25
+request_delay_seconds = 20
+max_per_run = 400
+
+[search]
+# Alamat Cloudflare Worker untuk pencarian semantik, misalnya
+# "https://lentera-riset.nama-anda.workers.dev". Bisa juga diisi lewat variabel
+# repositori WORKER_URL (Settings > Secrets and variables > Actions > Variables).
+# Jika kosong, halaman pencarian memakai pencocokan kata kunci saja.
+worker_url = ""
+# Jumlah makalah serupa di setiap halaman makalah.
+similar_papers = 5
+# Bahasa yang tidak ada di daftar [[languages]] tetapi disebut Gemini sebagai
+# bahasa yang dikaji mendapat halaman sendiri jika muncul di sekian makalah.
+auto_language_min_papers = 2
+# Bahasa yang tidak dibuatkan halaman (terlalu umum).
+ignore_languages = ["English"]
+
 # ---------------------------------------------------------------------------
 # Topik. `weight` menentukan seberapa besar satu kata kunci menambah skor
 # relevansi. Kata kunci dicocokkan pada judul dan abstrak, tanpa membedakan
@@ -174,3 +202,338 @@ keywords = [
   "machine translation", "parallel corpus", "dialect",
   "Universal Dependencies", "treebank",
 ]
+
+# ---------------------------------------------------------------------------
+# Bahasa. Setiap bahasa mendapat halaman sendiri yang berisi makalah yang
+# menyebut salah satu `aliases` di judul atau abstrak, atau yang oleh Gemini
+# dicatat sebagai bahasa yang dikaji. Nama yang lebih panjang didahulukan,
+# jadi "Papuan Malay" tidak ikut dihitung sebagai "Malay".
+# Bahasa lain yang disebut Gemini mendapat halaman otomatis (lihat [search]).
+# ---------------------------------------------------------------------------
+
+[language_groups]
+indonesia = "Bahasa Indonesia dan bahasa daerah"
+austronesia = "Bahasa Austronesia lainnya"
+other = "Bahasa lain"
+
+[[languages]]
+id = "indonesian"
+name_id = "Bahasa Indonesia"
+name_en = "Indonesian"
+group = "indonesia"
+aliases = ["Indonesian", "Bahasa Indonesia"]
+
+[[languages]]
+id = "indonesian-sign"
+name_id = "Bahasa Isyarat Indonesia"
+name_en = "Indonesian Sign Language"
+group = "indonesia"
+aliases = ["Indonesian Sign Language", "BISINDO", "SIBI"]
+
+[[languages]]
+id = "javanese"
+name_id = "Bahasa Jawa"
+name_en = "Javanese"
+group = "indonesia"
+aliases = ["Javanese"]
+
+[[languages]]
+id = "sundanese"
+name_id = "Bahasa Sunda"
+name_en = "Sundanese"
+group = "indonesia"
+aliases = ["Sundanese"]
+
+[[languages]]
+id = "balinese"
+name_id = "Bahasa Bali"
+name_en = "Balinese"
+group = "indonesia"
+aliases = ["Balinese"]
+
+[[languages]]
+id = "madurese"
+name_id = "Bahasa Madura"
+name_en = "Madurese"
+group = "indonesia"
+aliases = ["Madurese"]
+
+[[languages]]
+id = "minangkabau"
+name_id = "Bahasa Minangkabau"
+name_en = "Minangkabau"
+group = "indonesia"
+aliases = ["Minangkabau", "Minang"]
+
+[[languages]]
+id = "acehnese"
+name_id = "Bahasa Aceh"
+name_en = "Acehnese"
+group = "indonesia"
+aliases = ["Acehnese", "Achinese"]
+
+[[languages]]
+id = "buginese"
+name_id = "Bahasa Bugis"
+name_en = "Buginese"
+group = "indonesia"
+aliases = ["Buginese", "Bugis"]
+
+[[languages]]
+id = "banjarese"
+name_id = "Bahasa Banjar"
+name_en = "Banjarese"
+group = "indonesia"
+aliases = ["Banjarese", "Banjar"]
+
+[[languages]]
+id = "makassarese"
+name_id = "Bahasa Makassar"
+name_en = "Makassarese"
+group = "indonesia"
+aliases = ["Makassarese"]
+
+[[languages]]
+id = "sasak"
+name_id = "Bahasa Sasak"
+name_en = "Sasak"
+group = "indonesia"
+aliases = ["Sasak"]
+
+[[languages]]
+id = "betawi"
+name_id = "Bahasa Betawi"
+name_en = "Betawi"
+group = "indonesia"
+aliases = ["Betawi"]
+
+[[languages]]
+id = "lampung"
+name_id = "Bahasa Lampung"
+name_en = "Lampung"
+group = "indonesia"
+aliases = ["Lampung", "Lampungese"]
+
+[[languages]]
+id = "nias"
+name_id = "Bahasa Nias"
+name_en = "Nias"
+group = "indonesia"
+aliases = ["Nias"]
+
+[[languages]]
+id = "toraja"
+name_id = "Bahasa Toraja"
+name_en = "Toraja"
+group = "indonesia"
+aliases = ["Toraja"]
+
+[[languages]]
+id = "gorontalo"
+name_id = "Bahasa Gorontalo"
+name_en = "Gorontalo"
+group = "indonesia"
+aliases = ["Gorontalo", "Gorontalese"]
+
+[[languages]]
+id = "rejang"
+name_id = "Bahasa Rejang"
+name_en = "Rejang"
+group = "indonesia"
+aliases = ["Rejang"]
+
+[[languages]]
+id = "batak-toba"
+name_id = "Bahasa Batak Toba"
+name_en = "Toba Batak"
+group = "indonesia"
+aliases = ["Toba Batak", "Batak Toba"]
+
+[[languages]]
+id = "batak-karo"
+name_id = "Bahasa Batak Karo"
+name_en = "Karo Batak"
+group = "indonesia"
+aliases = ["Karo Batak", "Batak Karo"]
+
+[[languages]]
+id = "mandailing"
+name_id = "Bahasa Mandailing"
+name_en = "Mandailing"
+group = "indonesia"
+aliases = ["Mandailing", "Batak Mandailing"]
+
+[[languages]]
+id = "batak"
+name_id = "Bahasa Batak (lainnya)"
+name_en = "Batak"
+group = "indonesia"
+aliases = ["Batak"]
+
+[[languages]]
+id = "dayak-ngaju"
+name_id = "Bahasa Dayak Ngaju"
+name_en = "Ngaju"
+group = "indonesia"
+aliases = ["Dayak Ngaju", "Ngaju"]
+
+[[languages]]
+id = "dayak"
+name_id = "Bahasa Dayak (lainnya)"
+name_en = "Dayak"
+group = "indonesia"
+aliases = ["Dayak"]
+
+[[languages]]
+id = "ambonese-malay"
+name_id = "Bahasa Melayu Ambon"
+name_en = "Ambonese Malay"
+group = "indonesia"
+aliases = ["Ambonese Malay", "Ambonese"]
+
+[[languages]]
+id = "papuan-malay"
+name_id = "Bahasa Melayu Papua"
+name_en = "Papuan Malay"
+group = "indonesia"
+aliases = ["Papuan Malay"]
+
+[[languages]]
+id = "malay"
+name_id = "Bahasa Melayu"
+name_en = "Malay"
+group = "austronesia"
+aliases = ["Malay", "Bahasa Melayu", "Bahasa Malaysia"]
+
+[[languages]]
+id = "tagalog"
+name_id = "Bahasa Tagalog (Filipino)"
+name_en = "Tagalog"
+group = "austronesia"
+aliases = ["Tagalog", "Filipino"]
+
+[[languages]]
+id = "cebuano"
+name_id = "Bahasa Cebuano"
+name_en = "Cebuano"
+group = "austronesia"
+aliases = ["Cebuano"]
+
+[[languages]]
+id = "ilocano"
+name_id = "Bahasa Ilocano"
+name_en = "Ilocano"
+group = "austronesia"
+aliases = ["Ilocano", "Ilokano"]
+
+[[languages]]
+id = "hiligaynon"
+name_id = "Bahasa Hiligaynon"
+name_en = "Hiligaynon"
+group = "austronesia"
+aliases = ["Hiligaynon"]
+
+[[languages]]
+id = "waray"
+name_id = "Bahasa Waray"
+name_en = "Waray"
+group = "austronesia"
+aliases = ["Waray"]
+
+[[languages]]
+id = "bikol"
+name_id = "Bahasa Bikol"
+name_en = "Bikol"
+group = "austronesia"
+aliases = ["Bikol", "Bicolano"]
+
+[[languages]]
+id = "kapampangan"
+name_id = "Bahasa Kapampangan"
+name_en = "Kapampangan"
+group = "austronesia"
+aliases = ["Kapampangan"]
+
+[[languages]]
+id = "malagasy"
+name_id = "Bahasa Malagasi"
+name_en = "Malagasy"
+group = "austronesia"
+aliases = ["Malagasy"]
+
+[[languages]]
+id = "maori"
+name_id = "Bahasa Maori"
+name_en = "Maori"
+group = "austronesia"
+aliases = ["Maori", "Māori"]
+
+[[languages]]
+id = "hawaiian"
+name_id = "Bahasa Hawaii"
+name_en = "Hawaiian"
+group = "austronesia"
+aliases = ["Hawaiian"]
+
+[[languages]]
+id = "samoan"
+name_id = "Bahasa Samoa"
+name_en = "Samoan"
+group = "austronesia"
+aliases = ["Samoan"]
+
+[[languages]]
+id = "tongan"
+name_id = "Bahasa Tonga"
+name_en = "Tongan"
+group = "austronesia"
+aliases = ["Tongan"]
+
+[[languages]]
+id = "fijian"
+name_id = "Bahasa Fiji"
+name_en = "Fijian"
+group = "austronesia"
+aliases = ["Fijian"]
+
+[[languages]]
+id = "tetum"
+name_id = "Bahasa Tetun"
+name_en = "Tetum"
+group = "austronesia"
+aliases = ["Tetum", "Tetun"]
+
+[[languages]]
+id = "chamorro"
+name_id = "Bahasa Chamorro"
+name_en = "Chamorro"
+group = "austronesia"
+aliases = ["Chamorro"]
+
+[[languages]]
+id = "formosan"
+name_id = "Bahasa-bahasa Formosa"
+name_en = "Formosan languages"
+group = "austronesia"
+aliases = ["Formosan", "Amis", "Atayal", "Paiwan", "Seediq", "Bunun"]
+
+[[languages]]
+id = "cham"
+name_id = "Bahasa Cham"
+name_en = "Cham"
+group = "austronesia"
+aliases = ["Cham"]
+
+[[languages]]
+id = "bislama"
+name_id = "Bahasa Bislama"
+name_en = "Bislama"
+group = "austronesia"
+aliases = ["Bislama"]
+
+[[languages]]
+id = "tok-pisin"
+name_id = "Bahasa Tok Pisin"
+name_en = "Tok Pisin"
+group = "austronesia"
+aliases = ["Tok Pisin"]

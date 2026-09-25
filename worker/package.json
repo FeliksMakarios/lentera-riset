@@ -1,0 +1,8 @@
+{
+  "name": "lentera-riset-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test index.test.mjs"
+  }
+}

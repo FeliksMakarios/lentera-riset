@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import html
+import json
+import os
 import re
 import shutil
 from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
-from . import relevance, store
+from . import embeddings, languages, relevance, store
 from .config import ROOT, Config
 from .rank import parse_date
 from .summarize import SECTIONS
@@ -84,8 +86,10 @@ def tldr_pair(summary: dict | None) -> tuple[str, str] | None:
 # Komponen
 # ---------------------------------------------------------------------------
 
-def page(title: str, body: str, *, root: str, config: Config, updated_at: str | None, description: str = "") -> str:
+def page(title: str, body: str, *, root: str, config: Config, updated_at: str | None, description: str = "",
+         scripts: tuple[str, ...] = ()) -> str:
     site = config.site
+    extra_scripts = "".join(f'\n<script src="{root}assets/{name}" defer></script>' for name in scripts)
     desc = description or site.get("tagline", "")
     updated = f"Data diperbarui {date_id(updated_at)}." if updated_at else ""
     return f"""<!doctype html>
@@ -102,7 +106,7 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
 <header class="site-header">
   <div class="wrap header-inner">
     <a class="brand" href="{root}index.html"><span class="brand-mark" aria-hidden="true"></span>{esc(site.get('title', 'Lentera Riset'))}</a>
-    <nav><a href="{root}index.html">Makalah</a><a href="{root}tentang.html">Tentang</a><a href="{root}feed.xml">RSS</a></nav>
+    <nav><a href="{root}index.html">Makalah</a><a href="{root}cari.html">Cari</a><a href="{root}topik/index.html">Topik</a><a href="{root}bahasa/index.html">Bahasa</a><a href="{root}tentang.html">Tentang</a><a href="{root}feed.xml">RSS</a></nav>
   </div>
 </header>
 <main class="wrap">
@@ -114,19 +118,26 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
     <p>Ringkasan dibuat otomatis oleh model bahasa dan bisa keliru. Selalu periksa makalah aslinya. <a href="{esc(site.get('repo_url', '#'))}">Kode sumber</a>.</p>
   </div>
 </footer>
-<script src="{root}assets/app.js" defer></script>
+<script src="{root}assets/app.js" defer></script>{extra_scripts}
 </body>
 </html>
 """
 
 
-def topic_chips(config: Config, paper: dict) -> str:
+def topic_chips(config: Config, paper: dict, root: str = "") -> str:
     chips = []
     for tid in paper.get("topics", []):
         topic = config.topic(tid)
         if topic:
-            chips.append(f'<span class="chip chip-{esc(tid)}">{esc(topic.label_id)}</span>')
+            chips.append(f'<a class="chip chip-{esc(tid)}" href="{root}topik/{esc(tid)}.html">{esc(topic.label_id)}</a>')
     return "".join(chips)
+
+
+def language_chips(pages: dict, paper: dict, root: str = "") -> str:
+    return "".join(
+        f'<a class="chip" href="{root}bahasa/{esc(lid)}.html">{esc(pages[lid].name_id)}</a>'
+        for lid in paper.get("languages", []) if lid in pages
+    )
 
 
 def signal_items(paper: dict) -> list[tuple[str, str, str]]:
@@ -153,7 +164,7 @@ def signals_inline(paper: dict) -> str:
     return f'<div class="signals">{spans}</div>'
 
 
-def card(config: Config, paper: dict) -> str:
+def card(config: Config, paper: dict, root: str = "") -> str:
     summary = paper.get("summary")
     pair = tldr_pair(summary)
     if pair:
@@ -170,35 +181,37 @@ def card(config: Config, paper: dict) -> str:
         + (summary.get("languages_studied", []) if summary else [])
     ).lower()
     return f"""<article class="card" data-date="{esc(paper['published'])}" data-score="{paper.get('score', 0)}" data-topics="{esc(' '.join(paper.get('topics', [])))}" data-search="{esc(search_blob)}">
-  <div class="card-meta"><time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time><span>{esc(source_label(paper))}</span>{topic_chips(config, paper)}</div>
-  <h2><a href="papers/{slug(paper['id'])}.html">{esc(paper['title'])}</a></h2>
+  <div class="card-meta"><time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time><span>{esc(source_label(paper))}</span>{topic_chips(config, paper, root)}</div>
+  <h2><a href="{root}papers/{slug(paper['id'])}.html">{esc(paper['title'])}</a></h2>
   <p class="authors">{esc(authors_short(paper['authors']))}</p>
   {tldr}
   {signals_inline(paper)}
 </article>"""
 
 
-def index_body(config: Config, papers: list[dict]) -> str:
+def listing(config: Config, papers: list[dict], *, root: str = "", topic_filter: bool = True) -> str:
+    """Pengaturan urutan, saringan, dan pencarian cepat, diikuti kartu makalah."""
     options = "".join(
         f'<option value="{esc(t.id)}">{esc(t.label_id)}</option>' for t in config.topics
     )
-    cards = "\n".join(card(config, p) for p in papers)
+    topic_select = (
+        f"""<label class="field"><span class="sr-only">Topik</span>
+    <select id="topic-filter"><option value="">Semua topik</option>{options}</select>
+  </label>"""
+        if topic_filter else ""
+    )
+    cards = "\n".join(card(config, p, root) for p in papers)
     empty = "" if papers else '<p class="empty">Belum ada makalah. Data akan muncul setelah alur kerja harian berjalan.</p>'
-    return f"""<section class="intro">
-  <h1>{esc(config.site.get('title', 'Lentera Riset'))}</h1>
-  <p>{esc(config.site.get('tagline', ''))}</p>
-</section>
-<section class="controls" aria-label="Pengaturan daftar">
+    return f"""<section class="controls" aria-label="Pengaturan daftar">
   <div class="tabs" role="tablist">
     <button type="button" role="tab" class="tab" data-sort="score" aria-selected="true">Sedang ramai</button>
     <button type="button" role="tab" class="tab" data-sort="date" aria-selected="false">Terbaru</button>
   </div>
-  <label class="field"><span class="sr-only">Topik</span>
-    <select id="topic-filter"><option value="">Semua topik</option>{options}</select>
+  {topic_select}
+  <label class="field grow"><span class="sr-only">Saring</span>
+    <input id="search" type="search" placeholder="Saring judul, penulis, bahasa...">
   </label>
-  <label class="field grow"><span class="sr-only">Cari</span>
-    <input id="search" type="search" placeholder="Cari judul, penulis, bahasa...">
-  </label>
+  <a class="button" id="semantic-link" href="{root}cari.html">Cari berdasarkan makna</a>
 </section>
 <p class="result-count" id="result-count" aria-live="polite">{len(papers)} makalah</p>
 <section id="paper-list" class="paper-list">
@@ -206,6 +219,98 @@ def index_body(config: Config, papers: list[dict]) -> str:
 {empty}
 </section>
 <p class="empty" id="no-results" hidden>Tidak ada makalah yang cocok.</p>"""
+
+
+def index_body(config: Config, papers: list[dict]) -> str:
+    return f"""<section class="intro">
+  <h1>{esc(config.site.get('title', 'Lentera Riset'))}</h1>
+  <p>{esc(config.site.get('tagline', ''))}</p>
+</section>
+{listing(config, papers)}"""
+
+
+def topic_body(config: Config, topic, papers: list[dict]) -> str:
+    keywords = ", ".join(topic.keywords[:15]) + (", dan lainnya" if len(topic.keywords) > 15 else "")
+    return f"""<p class="back"><a href="index.html">&larr; Semua topik</a></p>
+<section class="intro">
+  <h1>{esc(topic.label_id)}</h1>
+  <p lang="en">{esc(topic.label_en)}</p>
+  <p class="note">Makalah yang judul atau abstraknya memuat kata kunci: {esc(keywords)}.</p>
+</section>
+{listing(config, papers, root="../", topic_filter=False)}"""
+
+
+def topics_index_body(config: Config, counts: dict[str, int]) -> str:
+    items = "".join(
+        f"""<li class="hub-item"><a href="{esc(t.id)}.html"><b>{esc(t.label_id)}</b></a>
+  <span class="hub-count">{counts.get(t.id, 0)} makalah</span>
+  <p class="note" lang="en">{esc(t.label_en)}. {esc(', '.join(t.keywords[:8]))}{', dan lainnya' if len(t.keywords) > 8 else ''}</p></li>"""
+        for t in config.topics
+    )
+    return f"""<section class="intro">
+  <h1>Topik</h1>
+  <p>Makalah dikelompokkan menurut topik yang dipantau. Satu makalah bisa masuk ke beberapa topik.</p>
+</section>
+<ul class="hub">{items}</ul>"""
+
+
+def language_body(config: Config, lang_page, papers: list[dict]) -> str:
+    group = config.language_groups.get(lang_page.group, "")
+    subtitle = f'<p lang="en">{esc(lang_page.name_en)}</p>' if lang_page.name_en != lang_page.name_id else ""
+    note = (
+        "Makalah yang menyebut bahasa ini di judul atau abstrak, atau yang oleh ringkasan otomatis dicatat mengkaji bahasa ini."
+        if lang_page.group != "other" else
+        "Makalah yang oleh ringkasan otomatis dicatat mengkaji bahasa ini. Makalah yang belum diringkas belum tercakup."
+    )
+    return f"""<p class="back"><a href="index.html">&larr; Semua bahasa</a></p>
+<section class="intro">
+  <h1>{esc(lang_page.name_id)}</h1>
+  {subtitle}
+  <p class="note">{esc(group)}. {esc(note)}</p>
+</section>
+{listing(config, papers, root="../")}"""
+
+
+def languages_index_body(config: Config, pages: dict) -> str:
+    sections = []
+    for group_id, label in config.language_groups.items():
+        members = sorted((p for p in pages.values() if p.group == group_id), key=lambda p: (-len(p.papers), p.name_id))
+        if not members:
+            continue
+        chips = "".join(
+            f'<a class="chip chip-lang" href="{esc(p.id)}.html">{esc(p.name_id)} <span class="chip-count">{len(p.papers)}</span></a>'
+            for p in members
+        )
+        sections.append(f'<section class="lang-group"><h2>{esc(label)}</h2><div class="chip-cloud">{chips}</div></section>')
+    body = "".join(sections) or '<p class="empty">Belum ada makalah yang menyebut bahasa tertentu.</p>'
+    return f"""<section class="intro">
+  <h1>Bahasa</h1>
+  <p>Makalah dikelompokkan menurut bahasa yang dikaji. Angka menunjukkan jumlah makalah.</p>
+</section>
+{body}"""
+
+
+def search_body(config: Config, worker_url: str) -> str:
+    topic_options = "".join(f'<option value="{esc(t.id)}">{esc(t.label_id)}</option>' for t in config.topics)
+    return f"""<section class="intro">
+  <h1>Cari makalah</h1>
+  <p>Tulis topik atau pertanyaan dalam bahasa Indonesia atau Inggris. Pencarian semantik menemukan makalah yang maknanya dekat, walaupun kata-katanya berbeda.</p>
+</section>
+<form class="controls search-form" id="search-form" data-worker="{esc(worker_url)}" role="search">
+  <label class="field grow"><span class="sr-only">Kata kunci atau pertanyaan</span>
+    <input id="q" name="q" type="search" placeholder="Misalnya: penerjemahan mesin untuk bahasa Batak" autocomplete="off">
+  </label>
+  <label class="field"><span class="sr-only">Topik</span>
+    <select id="search-topic" name="topik"><option value="">Semua topik</option>{topic_options}</select>
+  </label>
+  <label class="field"><span class="sr-only">Bahasa</span>
+    <select id="search-language" name="bahasa"><option value="">Semua bahasa</option></select>
+  </label>
+  <button class="button button-primary" type="submit">Cari</button>
+</form>
+<p class="result-count" id="search-status" aria-live="polite"></p>
+<section id="search-results" class="paper-list"></section>
+<noscript><p class="note">Halaman pencarian memerlukan JavaScript.</p></noscript>"""
 
 
 def legacy_summary(summary: dict) -> str:
@@ -249,7 +354,22 @@ def links_for(paper: dict) -> list[tuple[str, str]]:
     return links
 
 
-def paper_body(config: Config, paper: dict) -> str:
+def similar_html(items: list[dict]) -> str:
+    if not items:
+        return ""
+    rows = "".join(
+        f"""<li><a href="{slug(p['id'])}.html">{esc(p['title'])}</a>
+  <span class="note">{date_id(p['published'])}, {esc(source_label(p))}</span></li>"""
+        for p in items
+    )
+    return f"""<section class="similar">
+    <h2>Makalah serupa</h2>
+    <p class="note">Dipilih berdasarkan kedekatan makna judul dan abstrak.</p>
+    <ul>{rows}</ul>
+  </section>"""
+
+
+def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, similar: list[dict] | None = None) -> str:
     summary = paper.get("summary")
     link_html = "".join(
         f'<a class="button" href="{esc(url)}" rel="noopener">{esc(label)}</a>' for label, url in links_for(paper)
@@ -314,10 +434,11 @@ def paper_body(config: Config, paper: dict) -> str:
   <h1 lang="en">{esc(paper['title'])}</h1>
   <p class="authors">{esc(', '.join(paper['authors']))}</p>
   {tldr_html}
-  <div class="topic-row">{topic_chips(config, paper)}</div>
+  <div class="topic-row">{topic_chips(config, paper, "../")}{language_chips(lang_pages or {}, paper, "../")}</div>
   <div class="links">{link_html}</div>
   {summary_html}
   {abstract_html}
+  {similar_html(similar or [])}
   <section class="details">
     <h2>Mengapa makalah ini muncul</h2>
     <ul>{matched_html}{extra}</ul>
@@ -343,6 +464,13 @@ def about_body(config: Config) -> str:
 <li>Skor akhir adalah relevansi ditambah keramaian, lalu berkurang separuh setiap {esc(str(config.ranking.get('half_life_days', 14)))} hari supaya makalah baru tidak tenggelam.</li>
 <li>Gemini membaca isi lengkap makalah (PDF akses terbuka) dan menyusun ringkasan dalam bahasa Inggris dan Indonesia dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. TL;DR dua kalimat diringkas dari abstrak. Istilah teknis yang lazim tetap ditulis dalam bahasa Inggris dan dicetak miring, disertai glosarium.</li>
 </ol>
+
+<h2>Mencari dan menjelajah</h2>
+<ul>
+<li><b>Halaman topik dan bahasa</b> mengelompokkan makalah menurut topik yang dipantau dan menurut bahasa yang dikaji. Bahasa dikenali dari judul dan abstrak serta dari ringkasan otomatis.</li>
+<li><b>Pencarian semantik</b> mencocokkan pertanyaan Anda dengan makalah berdasarkan kedekatan makna. Judul dan abstrak setiap makalah diubah menjadi vektor makna dengan model embedding Gemini, begitu pula pertanyaan Anda, lalu makalah diurutkan menurut kemiripan kosinus. Pertanyaan boleh ditulis dalam bahasa Indonesia atau Inggris.</li>
+<li><b>Makalah serupa</b> di setiap halaman makalah dipilih dengan cara yang sama.</li>
+</ul>
 
 <h2>Topik yang dipantau</h2>
 <ul>{topics}</ul>
@@ -391,8 +519,8 @@ def feed(config: Config, papers: list[dict], updated_at: str | None) -> str:
 # Pembangunan
 # ---------------------------------------------------------------------------
 
-def select_papers(config: Config, papers: dict) -> list[dict]:
-    """Makalah yang tampil: relevan, maksimal N terbaru, diurutkan menurut skor.
+def relevant_papers(config: Config, papers: dict) -> list[dict]:
+    """Semua makalah yang relevan, diurutkan menurut skor.
 
     Relevansi dihitung ulang dengan konfigurasi saat ini, jadi perubahan kata kunci
     langsung berlaku tanpa menunggu pembaruan data berikutnya.
@@ -400,37 +528,108 @@ def select_papers(config: Config, papers: dict) -> list[dict]:
     for paper in papers.values():
         paper.update(relevance.score_paper(config, paper))
     min_rel = float(config.ranking.get("min_relevance", 2.0))
-    limit = int(config.site.get("max_papers_on_index", 300))
     relevant = [p for p in papers.values() if p.get("relevance", 0) >= min_rel]
+    return sorted(relevant, key=lambda p: p.get("score", 0), reverse=True)
+
+
+def select_papers(config: Config, papers: dict, relevant: list[dict] | None = None) -> list[dict]:
+    """Makalah di halaman depan: relevan, maksimal N terbaru, diurutkan menurut skor."""
+    limit = int(config.site.get("max_papers_on_index", 300))
+    relevant = relevant if relevant is not None else relevant_papers(config, papers)
     newest = sorted(relevant, key=lambda p: p["published"], reverse=True)[:limit]
     return sorted(newest, key=lambda p: p.get("score", 0), reverse=True)
 
 
-def build_site(config: Config, out: Path, data: dict | None = None) -> None:
+def search_index(config: Config, papers: list[dict], vectors: dict[str, list[float]], lang_pages: dict) -> dict:
+    """Data untuk halaman pencarian: metadata ringkas dan vektor int8 setiap makalah."""
+    items = []
+    for p in papers:
+        pair = tldr_pair(p.get("summary"))
+        item = {
+            "id": p["id"],
+            "url": f"papers/{slug(p['id'])}.html",
+            "title": p["title"],
+            "authors": authors_short(p["authors"], 3),
+            "date": p["published"][:10],
+            "date_label": date_id(p["published"]),
+            "source": source_label(p),
+            "topics": p.get("topics", []),
+            "languages": p.get("languages", []),
+            "tldr": re.sub(r"\*([^*\n]+?)\*", r"\1", pair[0]) if pair else "",
+            "abstract": (p.get("abstract") or "")[:600],
+            "score": p.get("score", 0),
+        }
+        if p["id"] in vectors:
+            item["v"] = embeddings.encode_i8(vectors[p["id"]])
+        items.append(item)
+    return {
+        "model": config.embeddings.get("model"),
+        "dimensions": int(config.embeddings.get("dimensions", 256)),
+        "topics": {t.id: t.label_id for t in config.topics},
+        "languages": {
+            lid: {"name": pg.name_id, "group": pg.group, "count": len(pg.papers)}
+            for lid, pg in sorted(lang_pages.items(), key=lambda x: (-len(x[1].papers), x[1].name_id))
+        },
+        "papers": items,
+    }
+
+
+def build_site(config: Config, out: Path, data: dict | None = None, vectors: dict | None = None) -> None:
     data = data if data is not None else store.load()
+    if vectors is None:
+        vectors = embeddings.vectors_for(embeddings.load(), config)
     updated_at = data.get("updated_at")
-    papers = select_papers(config, data["papers"])
+    relevant = relevant_papers(config, data["papers"])
+    index_papers = select_papers(config, data["papers"], relevant)
+    lang_pages = languages.group_papers(config, relevant)
+    by_id = {p["id"]: p for p in relevant}
+    k = int(config.search.get("similar_papers", 5))
+    similar = embeddings.similar(vectors, list(by_id), k=k) if k else {}
+    worker_url = (os.environ.get("LENTERA_WORKER_URL") or config.search.get("worker_url") or "").strip().rstrip("/")
 
     if out.exists():
         shutil.rmtree(out)
-    (out / "papers").mkdir(parents=True)
+    for sub in ("papers", "topik", "bahasa"):
+        (out / sub).mkdir(parents=True)
     shutil.copytree(STATIC_DIR, out / "assets")
 
     title = config.site.get("title", "Lentera Riset")
-    (out / "index.html").write_text(
-        page(title, index_body(config, papers), root="", config=config, updated_at=updated_at), encoding="utf-8"
-    )
-    (out / "tentang.html").write_text(
-        page(f"Tentang | {title}", about_body(config), root="", config=config, updated_at=updated_at), encoding="utf-8"
-    )
-    for paper in papers:
+
+    def write(path: str, page_title: str, body: str, root: str, **kwargs) -> None:
+        (out / path).write_text(
+            page(page_title, body, root=root, config=config, updated_at=updated_at, **kwargs), encoding="utf-8"
+        )
+
+    write("index.html", title, index_body(config, index_papers), "")
+    write("tentang.html", f"Tentang | {title}", about_body(config), "")
+    write("cari.html", f"Cari | {title}", search_body(config, worker_url), "", scripts=("search.js",))
+
+    counts = {t.id: 0 for t in config.topics}
+    for topic in config.topics:
+        members = [p for p in relevant if topic.id in p.get("topics", [])]
+        counts[topic.id] = len(members)
+        write(f"topik/{topic.id}.html", f"{topic.label_id} | {title}", topic_body(config, topic, members), "../")
+    write("topik/index.html", f"Topik | {title}", topics_index_body(config, counts), "../")
+
+    for lid, lang_page in lang_pages.items():
+        write(f"bahasa/{lid}.html", f"{lang_page.name_id} | {title}", language_body(config, lang_page, lang_page.papers), "../")
+    write("bahasa/index.html", f"Bahasa | {title}", languages_index_body(config, lang_pages), "../")
+
+    for paper in relevant:
         pair = tldr_pair(paper.get("summary"))
         desc = pair[0] if pair else paper["abstract"][:200]
-        (out / "papers" / f"{slug(paper['id'])}.html").write_text(
-            page(f"{paper['title']} | {title}", paper_body(config, paper), root="../",
-                 config=config, updated_at=updated_at, description=desc.replace("*", "")),
-            encoding="utf-8",
-        )
-    (out / "feed.xml").write_text(feed(config, papers, updated_at), encoding="utf-8")
+        near = [by_id[pid] for pid, _ in similar.get(paper["id"], [])]
+        write(f"papers/{slug(paper['id'])}.html", f"{paper['title']} | {title}",
+              paper_body(config, paper, lang_pages, near), "../", description=desc.replace("*", ""))
+
+    (out / "search-index.json").write_text(
+        json.dumps(search_index(config, relevant, vectors, lang_pages), ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    (out / "feed.xml").write_text(feed(config, index_papers, updated_at), encoding="utf-8")
     (out / ".nojekyll").write_text("", encoding="utf-8")
-    print(f"Situs dibangun di {out} ({len(papers)} makalah)")
+    with_vectors = sum(1 for p in relevant if p["id"] in vectors)
+    print(
+        f"Situs dibangun di {out} ({len(index_papers)} makalah di beranda, {len(relevant)} halaman makalah, "
+        f"{len(lang_pages)} halaman bahasa, {with_vectors} makalah bervektor)"
+    )

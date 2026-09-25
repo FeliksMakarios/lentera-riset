@@ -23,6 +23,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Cetak log seketika, supaya lama setiap langkah terlihat di log Actions.
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +50,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/papers.json
+          git add data/
           if git diff --cached --quiet; then
             echo "Tidak ada perubahan data."
           else
@@ -56,6 +59,9 @@ jobs:
           fi
 
       - name: Bangun situs
+        env:
+          # Alamat Worker pencarian semantik (variabel repositori, bukan secret).
+          LENTERA_WORKER_URL: ${{ vars.WORKER_URL }}
         run: python -m lentera build --out _site
 
       - uses: actions/configure-pages@v5

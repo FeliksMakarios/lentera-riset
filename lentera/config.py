@@ -22,6 +22,15 @@ class Topic:
 
 
 @dataclass
+class Language:
+    id: str
+    name_id: str
+    name_en: str
+    group: str
+    aliases: list[str]
+
+
+@dataclass
 class Config:
     site: dict
     arxiv: dict
@@ -31,6 +40,10 @@ class Config:
     acl: dict = field(default_factory=dict)
     openalex: dict = field(default_factory=dict)
     signals: dict = field(default_factory=dict)
+    embeddings: dict = field(default_factory=dict)
+    search: dict = field(default_factory=dict)
+    language_groups: dict = field(default_factory=dict)
+    languages: list[Language] = field(default_factory=list)
 
     def topic(self, topic_id: str) -> Topic | None:
         return next((t for t in self.topics if t.id == topic_id), None)
@@ -61,6 +74,19 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
     ids = [t.id for t in topics]
     if len(ids) != len(set(ids)):
         raise ValueError("ID topik di config/topics.toml harus unik")
+    languages = [
+        Language(
+            id=l["id"],
+            name_id=l["name_id"],
+            name_en=l["name_en"],
+            group=l.get("group", "other"),
+            aliases=list(l.get("aliases") or [l["name_en"]]),
+        )
+        for l in raw.get("languages", [])
+    ]
+    lang_ids = [l.id for l in languages]
+    if len(lang_ids) != len(set(lang_ids)):
+        raise ValueError("ID bahasa di config/topics.toml harus unik")
     return Config(
         site=raw.get("site", {}),
         arxiv=raw.get("arxiv", {}),
@@ -70,4 +96,8 @@ def load_config(path: Path = DEFAULT_CONFIG) -> Config:
         acl=raw.get("acl", {}),
         openalex=raw.get("openalex", {}),
         signals=raw.get("signals", {}),
+        embeddings=raw.get("embeddings", {}),
+        search=raw.get("search", {}),
+        language_groups=raw.get("language_groups", {}),
+        languages=languages,
     )

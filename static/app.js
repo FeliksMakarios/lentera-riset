@@ -1,4 +1,5 @@
-// Pengurutan, penyaringan topik, dan pencarian di halaman depan.
+// Pengurutan, penyaringan topik, dan pencarian cepat di daftar makalah
+// (halaman depan, halaman topik, dan halaman bahasa).
 (function () {
   var list = document.getElementById("paper-list");
   if (!list) return;
@@ -9,6 +10,8 @@
   var search = document.getElementById("search");
   var count = document.getElementById("result-count");
   var noResults = document.getElementById("no-results");
+  var semanticLink = document.getElementById("semantic-link");
+  var semanticBase = semanticLink ? semanticLink.getAttribute("href") : "";
 
   function remember(key, value) {
     try { localStorage.setItem("lentera:" + key, value); } catch (e) { /* abaikan */ }
@@ -20,7 +23,7 @@
   var sortBy = recall("sort") === "date" ? "date" : "score";
 
   function apply() {
-    var topic = topicSelect.value;
+    var topic = topicSelect ? topicSelect.value : "";
     var terms = search.value.toLowerCase().split(/\s+/).filter(Boolean);
 
     cards.sort(function (a, b) {
@@ -44,6 +47,10 @@
     });
     count.textContent = shown + " makalah";
     noResults.hidden = shown !== 0 || cards.length === 0;
+    if (semanticLink) {
+      var q = search.value.trim();
+      semanticLink.setAttribute("href", q ? semanticBase + "?q=" + encodeURIComponent(q) : semanticBase);
+    }
   }
 
   tabs.forEach(function (tab) {
@@ -53,7 +60,7 @@
       apply();
     });
   });
-  topicSelect.addEventListener("change", apply);
+  if (topicSelect) topicSelect.addEventListener("change", apply);
   search.addEventListener("input", apply);
   apply();
 })();

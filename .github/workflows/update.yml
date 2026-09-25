@@ -53,10 +53,25 @@ jobs:
           git add data/
           if git diff --cached --quiet; then
             echo "Tidak ada perubahan data."
-          else
-            git commit -m "Perbarui data makalah $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git commit -m "Perbarui data makalah $(date -u +%Y-%m-%d)"
+          # main bisa maju selama run berjalan (misalnya ada PR yang digabung).
+          # Commit data lalu diletakkan di atas main terbaru dan didorong ulang,
+          # supaya ringkasan yang sudah dibuat tidak hilang.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push ditolak, menyesuaikan dengan main terbaru (percobaan $attempt)"
+            git fetch --depth=50 origin main
+            if ! git rebase origin/main; then
+              git rebase --abort
+              echo "::error::Data bentrok dengan perubahan di main; perlu penanganan manual."
+              exit 1
+            fi
+          done
+          exit 1
 
       - name: Bangun situs
         env:

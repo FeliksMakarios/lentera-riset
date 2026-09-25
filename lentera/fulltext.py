@@ -6,6 +6,8 @@ terbuka dari OpenAlex. Jika gagal, ringkasan dibuat dari abstrak saja.
 
 from __future__ import annotations
 
+import urllib.parse
+
 from . import http
 
 # Batas ukuran PDF. Permintaan Gemini dengan data sisipan dibatasi 20 MB,
@@ -14,7 +16,15 @@ DEFAULT_MAX_MB = 14
 
 
 def pdf_url(paper: dict) -> str:
-    return paper.get("pdf_url") or ""
+    """Alamat PDF yang aman dikirim. Beberapa jurnal memakai spasi di nama berkas
+    ("/get/IJCSMT/VOL. 12 NO. 6 2026/..."), yang ditolak urllib jika tidak dikodekan."""
+    url = (paper.get("pdf_url") or "").strip()
+    if not url:
+        return ""
+    parts = urllib.parse.urlsplit(url)
+    path = urllib.parse.quote(parts.path, safe="/%:@!$&'()*+,;=~")
+    query = urllib.parse.quote(parts.query, safe="=&%:/?+,;@!$'()*~")
+    return urllib.parse.urlunsplit((parts.scheme, parts.netloc, path, query, parts.fragment))
 
 
 def fetch_pdf(paper: dict, max_mb: float = DEFAULT_MAX_MB, log=print) -> bytes | None:

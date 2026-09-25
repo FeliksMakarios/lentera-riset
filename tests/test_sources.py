@@ -313,6 +313,18 @@ class FullTextTest(unittest.TestCase):
         with mock.patch.object(http, "request", return_value=b"%PDF" + b"0" * 2_000_000):
             self.assertIsNone(fulltext.fetch_pdf(self.PAPER, max_mb=1, log=lambda *_: None))
 
+    def test_url_with_spaces_is_encoded(self):
+        paper = {"id": "x", "pdf_url": "https://j.example/get/IJCSMT/VOL. 12 NO. 6 2026/Machine Translation 73-85.pdf"}
+        self.assertEqual(
+            fulltext.pdf_url(paper),
+            "https://j.example/get/IJCSMT/VOL.%2012%20NO.%206%202026/Machine%20Translation%2073-85.pdf",
+        )
+        # Alamat yang sudah dikodekan atau memakai kueri tidak berubah.
+        for url in ["https://aclanthology.org/2026.lrec-1.129.pdf",
+                    "https://j.example/a%20b.pdf",
+                    "https://j.example/download?id=12&file=a.pdf"]:
+            self.assertEqual(fulltext.pdf_url({"pdf_url": url}), url)
+
     def test_no_url_or_download_error(self):
         self.assertIsNone(fulltext.fetch_pdf({"id": "x", "pdf_url": ""}, log=lambda *_: None))
         with mock.patch.object(http, "request", side_effect=http.HttpError(403, "u")):

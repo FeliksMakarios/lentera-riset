@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
-from . import embeddings, languages, relevance, store, tasks
+from . import embeddings, fulltext, languages, relevance, store, tasks
 from .config import ROOT, Config
 from .rank import parse_date
 from .summarize import SECTIONS
@@ -363,11 +363,47 @@ def similar_html(items: list[dict]) -> str:
   </section>"""
 
 
-def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, similar: list[dict] | None = None) -> str:
+ASK_SUGGESTIONS = [
+    "Apa kontribusi utama makalah ini?",
+    "Data apa yang dipakai dan dari mana asalnya?",
+    "Seberapa baik hasilnya dibandingkan metode lain?",
+    "Apa keterbatasan penelitian ini?",
+]
+
+
+def ask_html(paper: dict) -> str:
+    """Kotak tanya jawab; pertanyaan dikirim static/ask.js ke POST /ask di Worker."""
+    if paper.get("pdf_url"):
+        basis = "dari isi lengkap makalah (PDF akses terbuka)"
+    else:
+        basis = "hanya dari abstrak dan ringkasan, karena PDF akses terbuka tidak tersedia"
+    suggestions = "".join(
+        f'<button type="button" class="ask-chip">{esc(q)}</button>' for q in ASK_SUGGESTIONS
+    )
+    return f"""<section class="ask" id="tanya" data-paper="{esc(slug(paper['id']))}">
+    <h2>Tanya makalah ini</h2>
+    <p class="note">Jawaban disusun oleh Gemini {basis}. Jawaban bisa keliru, jadi periksa kembali makalah aslinya.</p>
+    <div class="ask-log" id="ask-log" aria-live="polite"></div>
+    <div class="ask-suggest" id="ask-suggest">{suggestions}</div>
+    <form class="ask-form" id="ask-form">
+      <label class="sr-only" for="ask-q">Pertanyaan tentang makalah ini</label>
+      <textarea id="ask-q" rows="2" maxlength="500" placeholder="Tulis pertanyaan, misalnya: bahasa apa saja yang diuji?" required></textarea>
+      <div class="ask-actions">
+        <button type="button" class="link-button" id="ask-clear" hidden>Hapus percakapan</button>
+        <button type="submit" class="ask-send" id="ask-send">Tanya</button>
+      </div>
+    </form>
+  </section>"""
+
+
+def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, similar: list[dict] | None = None,
+               ask: bool = False) -> str:
     summary = paper.get("summary")
     link_html = "".join(
         f'<a class="button" href="{esc(url)}" rel="noopener">{esc(label)}</a>' for label, url in links_for(paper)
     )
+    if ask:
+        link_html = '<a class="button button-ask" href="#tanya">Tanya makalah ini</a>' + link_html
 
     matched = paper.get("matched_keywords") or {}
     matched_html = "".join(
@@ -432,6 +468,7 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
   <div class="links">{link_html}</div>
   {summary_html}
   {abstract_html}
+  {ask_html(paper) if ask else ""}
   {similar_html(similar or [])}
   <section class="details">
     <h2>Mengapa makalah ini muncul</h2>
@@ -466,6 +503,7 @@ def about_body(config: Config) -> str:
 <li><b>Kolom pencarian</b> di bagian atas setiap halaman mencari berdasarkan makna. Judul dan abstrak setiap makalah diubah menjadi vektor makna dengan model embedding Gemini, begitu pula pertanyaan Anda, lalu makalah diurutkan menurut kemiripan kosinus. Hasilnya bisa disaring menurut rentang waktu, topik, dan bahasa.</li>
 <li><b>Makalah</b> menampilkan seluruh koleksi dengan saringan tugas (misalnya terjemahan mesin atau pengenalan ucapan), topik, dan bahasa yang dikaji.</li>
 <li><b>Makalah serupa</b> di setiap halaman makalah dipilih berdasarkan kedekatan makna judul dan abstrak.</li>
+<li><b>Tanya makalah ini</b> di setiap halaman makalah menjawab pertanyaan Anda tentang makalah itu. Gemini membaca isi lengkap makalah (PDF akses terbuka), atau abstrak dan ringkasan jika PDF tidak tersedia, dan diminta menjawab hanya dari isi makalah.</li>
 </ul>
 
 <h2>Topik yang dipantau</h2>
@@ -474,7 +512,7 @@ def about_body(config: Config) -> str:
 <h2>Keterbatasan</h2>
 <ul>
 <li>Jika PDF akses terbuka tidak tersedia (misalnya makalah jurnal berbayar), ringkasan dibuat dari abstrak saja. Halaman makalah menyebutkan dasar ringkasannya.</li>
-<li>Model bahasa bisa keliru. Periksa makalah aslinya sebelum mengutip.</li>
+<li>Model bahasa bisa keliru, baik di ringkasan maupun di jawaban tanya jawab. Periksa makalah aslinya sebelum mengutip.</li>
 <li>Makalah tentang bahasa berdaya sumber rendah jarang ramai di media sosial, sehingga peringkat lebih banyak ditentukan oleh relevansi dan kebaruan.</li>
 <li>Sinyal dari X (Twitter) dan Reddit belum dipakai karena API-nya berbayar atau mewajibkan otorisasi khusus.</li>
 </ul>
@@ -587,6 +625,37 @@ def search_index(config: Config, papers: list[dict], vectors: dict[str, list[flo
     }
 
 
+def summary_text(summary: dict | None) -> str:
+    """Ringkasan versi Inggris sebagai teks biasa, untuk konteks tanya jawab."""
+    if not summary:
+        return ""
+    if "sections" in summary:
+        parts = [f"TL;DR: {summary['tldr']['en']}"] + [
+            f"{title_en}: {summary['sections'][key]['en']}"
+            for key, _, title_en in SECTIONS
+            if summary["sections"].get(key)
+        ]
+    else:
+        parts = [(summary.get("en") or {}).get("summary", "")]
+    if summary.get("languages_studied"):
+        parts.append("Languages studied: " + ", ".join(summary["languages_studied"]))
+    return "\n\n".join(p for p in parts if p.strip())
+
+
+def qa_data(paper: dict) -> dict:
+    """Keterangan satu makalah yang dibaca Worker untuk POST /ask (qa/<id>.json)."""
+    return {
+        "id": paper["id"],
+        "title": paper["title"],
+        "authors": paper.get("authors", []),
+        "published": (paper.get("published") or "")[:10],
+        "venue": source_label(paper),
+        "abstract": paper.get("abstract") or "",
+        "summary": summary_text(paper.get("summary")),
+        "pdf_url": fulltext.pdf_url(paper),
+    }
+
+
 def write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
@@ -610,6 +679,7 @@ def build_site(config: Config, out: Path, data: dict | None = None, vectors: dic
     if out.exists():
         shutil.rmtree(out)
     (out / "papers").mkdir(parents=True)
+    (out / "qa").mkdir()
     shutil.copytree(STATIC_DIR, out / "assets")
 
     title = config.site.get("title", "Lentera Riset")
@@ -629,8 +699,11 @@ def build_site(config: Config, out: Path, data: dict | None = None, vectors: dic
         pair = tldr_pair(paper.get("summary"))
         desc = pair[0] if pair else paper["abstract"][:200]
         near = [by_id[pid] for pid, _ in similar.get(paper["id"], [])]
+        ask = bool(worker_url)
         write(f"papers/{slug(paper['id'])}.html", f"{paper['title']} | {title}",
-              paper_body(config, paper, lang_pages, near), "../", description=desc.replace("*", ""))
+              paper_body(config, paper, lang_pages, near, ask=ask), "../", description=desc.replace("*", ""),
+              scripts=("ask.js",) if ask else (), worker_url=worker_url)
+        write_json(out / "qa" / f"{slug(paper['id'])}.json", qa_data(paper))
 
     write_json(out / "catalog.json", catalog_data(config, relevant, lang_pages))
     write_json(out / "search-index.json", search_index(config, relevant, vectors))

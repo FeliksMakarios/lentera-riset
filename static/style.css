@@ -256,3 +256,31 @@ a.chip:hover { text-decoration: underline; }
 .field-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
 .filter-bar select { width: 100%; }
 .chip-task { background: var(--austronesia); color: var(--austronesia-text); }
+
+/* Tanya jawab di halaman makalah */
+.button-ask { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+.button-ask:hover { color: var(--bg); filter: brightness(1.08); }
+.ask { margin: 28px 0; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); scroll-margin-top: 80px; }
+.ask h2 { margin-top: 0; }
+.ask .note { margin: 0 0 12px; }
+.ask-log { display: flex; flex-direction: column; gap: 10px; }
+.ask-log:not(:empty) { margin-bottom: 14px; }
+.ask-turn { padding: 10px 14px; border-radius: var(--radius); max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.ask-user { align-self: flex-end; background: var(--accent-soft); max-width: 85%; white-space: pre-wrap; }
+.ask-model { background: var(--bg); border: 1px solid var(--border); }
+.ask-who { display: block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.ask-text p { margin: 0 0 8px; line-height: 1.55; }
+.ask-text p:last-child, .ask-text ul:last-child, .ask-text ol:last-child { margin-bottom: 0; }
+.ask-text ul, .ask-text ol { margin: 0 0 8px; padding-left: 22px; line-height: 1.5; }
+.ask-meta { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
+.ask-pending .ask-text { color: var(--muted); font-style: italic; }
+.ask-error { border-color: var(--indonesia-text); background: var(--indonesia); color: var(--indonesia-text); }
+.ask-suggest { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.ask-suggest[hidden] { display: none; }
+.ask-chip { font: inherit; font-size: 0.85rem; padding: 5px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--chip); color: var(--chip-text); cursor: pointer; text-align: left; }
+.ask-chip:hover { border-color: var(--accent); color: var(--link); }
+.ask-form textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); resize: vertical; min-height: 3.2em; }
+.ask-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ask-actions { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 8px; }
+.ask-send { font: inherit; font-weight: 600; padding: 7px 18px; border: 0; border-radius: 8px; background: var(--accent); color: var(--bg); cursor: pointer; }
+.ask-send:disabled { opacity: 0.6; cursor: wait; }

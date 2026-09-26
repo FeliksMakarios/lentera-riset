@@ -1,13 +1,16 @@
-// Cloudflare Worker untuk pencarian semantik Lentera Riset.
+// Cloudflare Worker untuk Lentera Riset. Kunci API Gemini disimpan sebagai secret
+// GEMINI_API_KEY dan tidak pernah sampai ke peramban.
 //
-// Halaman pencarian mengirim teks pertanyaan ke POST /embed. Worker mengubahnya
-// menjadi vektor makna dengan model embedding Gemini (kunci API disimpan sebagai
-// secret GEMINI_API_KEY, tidak pernah sampai ke peramban), lalu mengembalikan
-// vektornya. Model dan dimensinya harus sama dengan [embeddings] di
-// config/topics.toml, karena vektor makalah dibuat dengan pengaturan itu.
+// POST /embed  Pencarian semantik. Teks pencarian diubah menjadi vektor makna dengan
+//              model embedding Gemini. Model dan dimensinya harus sama dengan
+//              [embeddings] di config/topics.toml, karena vektor makalah dibuat
+//              dengan pengaturan itu.
+// POST /ask    Tanya jawab tentang satu makalah. Lihat ask.js.
+
+import { handleAsk } from "./ask.js";
+import { GEMINI_URL, json } from "./util.js";
 
 const MAX_CHARS = 300;
-const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
 
 function allowedOrigins(env) {
   return (env.ALLOWED_ORIGINS || "")
@@ -26,12 +29,6 @@ function corsHeaders(origin) {
   };
 }
 
-function json(body, status, headers) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...headers },
-  });
-}
 
 function settings(env) {
   return {
@@ -105,7 +102,9 @@ export default {
       return json({ ok: true, ...settings(env), key_configured: Boolean(env.GEMINI_API_KEY) }, 200, cors);
     }
 
-    if (url.pathname !== "/embed" || request.method !== "POST") {
+    const routes = { "/embed": [handleEmbed, env.LIMITER], "/ask": [handleAsk, env.ASK_LIMITER || env.LIMITER] };
+    const route = routes[url.pathname];
+    if (!route || request.method !== "POST") {
       return json({ error: "tidak ditemukan" }, 404, cors);
     }
     // Hanya halaman Lentera Riset yang boleh memakai kuota Gemini lewat Worker ini.
@@ -115,36 +114,40 @@ export default {
     if (!env.GEMINI_API_KEY) {
       return json({ error: "GEMINI_API_KEY belum diisi di Worker" }, 500, cors);
     }
-    if (env.LIMITER) {
+    const [handler, limiter] = route;
+    if (limiter) {
       const ip = request.headers.get("CF-Connecting-IP") || "anon";
-      const { success } = await env.LIMITER.limit({ key: ip });
+      const { success } = await limiter.limit({ key: ip });
       if (!success) {
         return json({ error: "terlalu banyak permintaan, coba lagi sebentar lagi" }, 429, cors);
       }
     }
-
-    let text;
-    try {
-      const body = await request.json();
-      text = typeof body.text === "string" ? body.text.trim().replace(/\s+/g, " ") : "";
-    } catch (e) {
-      text = "";
-    }
-    if (text.length < 2) {
-      return json({ error: "teks pencarian kosong" }, 400, cors);
-    }
-    text = text.slice(0, MAX_CHARS);
-
-    const { model, dimensions } = settings(env);
-    const key = `https://lentera-cache.internal/embed?m=${model}&d=${dimensions}&q=${encodeURIComponent(text.toLowerCase())}`;
-    try {
-      const embedding = await cached(key, () => embed(text, env));
-      return json({ model, dimensions, embedding }, 200, cors);
-    } catch (e) {
-      const status = e.status === 429 ? 503 : 502;
-      const message = e.status === 429 ? "kuota Gemini sedang habis" : "gagal menghubungi Gemini";
-      console.log(`embed gagal: ${e.message}`);
-      return json({ error: message }, status, cors);
-    }
+    return handler(request, env, cors);
   },
 };
+
+async function handleEmbed(request, env, cors) {
+  let text;
+  try {
+    const body = await request.json();
+    text = typeof body.text === "string" ? body.text.trim().replace(/\s+/g, " ") : "";
+  } catch (e) {
+    text = "";
+  }
+  if (text.length < 2) {
+    return json({ error: "teks pencarian kosong" }, 400, cors);
+  }
+  text = text.slice(0, MAX_CHARS);
+
+  const { model, dimensions } = settings(env);
+  const key = `https://lentera-cache.internal/embed?m=${model}&d=${dimensions}&q=${encodeURIComponent(text.toLowerCase())}`;
+  try {
+    const embedding = await cached(key, () => embed(text, env));
+    return json({ model, dimensions, embedding }, 200, cors);
+  } catch (e) {
+    const status = e.status === 429 ? 503 : 502;
+    const message = e.status === 429 ? "kuota Gemini sedang habis" : "gagal menghubungi Gemini";
+    console.log(`embed gagal: ${e.message}`);
+    return json({ error: message }, status, cors);
+  }
+}

@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Uji Worker
-        run: node --test worker/index.test.mjs
+        run: node --test worker/index.test.mjs worker/ask.test.mjs
 
       - name: Periksa secret Cloudflare
         id: check

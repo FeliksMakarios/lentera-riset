@@ -22,6 +22,7 @@ Situs: <https://feliksmakarios.github.io/lentera-riset/>
 - **Kolom pencarian berdasarkan makna** di bagian atas setiap halaman, seperti di Hugging Face dan Semantic Scholar. Pertanyaan dalam bahasa Indonesia atau Inggris dicocokkan dengan makalah berdasarkan kedekatan makna, bukan hanya kesamaan kata. Hasilnya bisa disaring menurut rentang waktu, topik, dan bahasa. Jika Worker pencarian belum aktif, hasil memakai kecocokan kata kunci.
 - **Halaman Makalah** bergaya halaman Models di Hugging Face: panel kiri berisi saringan **Tugas** (misalnya terjemahan mesin, pengenalan ucapan, analisis sentimen), **Topik**, dan **Bahasa**, masing-masing dengan kolom untuk mencari pilihan. Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini; tugas dikenali dari kata kunci di `[[tasks]]`.
 - **Makalah serupa** di setiap halaman makalah, berdasarkan kedekatan makna judul dan abstrak.
+- **Tanya makalah ini**: kotak tanya jawab di setiap halaman makalah. Pengunjung bisa bertanya dalam bahasa Indonesia atau Inggris (misalnya "Data apa yang dipakai?"), dan Gemini menjawab berdasarkan isi lengkap makalah (PDF akses terbuka), atau abstrak dan ringkasan jika PDF tidak tersedia. Percakapan bisa berlanjut dengan pertanyaan susulan.
 - Umpan RSS di `feed.xml`.
 
 ## Cara kerja
@@ -31,11 +32,14 @@ arXiv, ACL Anthology, OpenAlex ──► penilaian relevansi ──► sinyal ke
                                     (config/topics.toml)   (HF, HN, GitHub, S2)   (Inggris + Indonesia)      (embedding Gemini)           (GitHub Pages)
 
 Pengunjung ──► halaman Cari ──► Cloudflare Worker ──► embedding Gemini untuk pertanyaan ──► dibandingkan dengan vektor makalah di peramban
+Pengunjung ──► Tanya makalah ini ──► Cloudflare Worker ──► qa/<id>.json + PDF makalah ──► jawaban Gemini
 ```
 
 Semuanya berjalan di GitHub Actions setiap hari pukul 06.00 WIB. Data disimpan di `data/papers.json` dan `data/embeddings.json` di dalam repositori, jadi tidak perlu basis data. Makalah yang sudah diringkas tidak diringkas ulang, kecuali abstraknya berubah. Begitu pula vektornya.
 
 Pencarian semantik bekerja begini: setiap makalah diubah menjadi vektor makna (embedding) dari judul dan abstraknya saat alur kerja harian berjalan. Saat pengunjung mencari, pertanyaannya diubah menjadi vektor oleh Cloudflare Worker kecil dengan model yang sama, lalu peramban mengurutkan makalah menurut kemiripan kosinus. Kunci Gemini hanya tersimpan di Worker, tidak pernah dikirim ke peramban.
+
+Tanya jawab bekerja begini: pertanyaan dikirim ke `POST /ask` di Worker yang sama. Worker mengambil keterangan makalah (judul, abstrak, ringkasan, alamat PDF) dari `qa/<id>.json` di situs, bukan dari peramban, jadi Worker hanya menjawab tentang makalah yang ada di Lentera Riset. PDF makalah diunggah ke Gemini Files API (disimpan Google selama 48 jam), lalu Gemini diminta menjawab hanya dari isi makalah. Alamat berkas PDF itu dikembalikan ke peramban, jadi pertanyaan susulan tidak perlu mengunggah ulang PDF-nya.
 
 ## Penyiapan (sekali saja)
 
@@ -58,9 +62,11 @@ Vektor makalah dibuat otomatis oleh alur kerja harian memakai `GEMINI_API_KEY`. 
 3. Salin **Account ID** (ada di kolom kanan halaman **Workers & Pages**, atau di alamat dasbor setelah `dash.cloudflare.com/`). Simpan sebagai secret repositori `CLOUDFLARE_ACCOUNT_ID`.
 4. Di tab **Actions**, jalankan **Terbitkan Worker pencarian semantik**. Ringkasan hasilnya menampilkan alamat Worker, misalnya `https://lentera-riset.nama-anda.workers.dev`. `GEMINI_API_KEY` ikut disimpan sebagai secret Worker secara otomatis.
 5. Buka **Settings > Secrets and variables > Actions**, tab **Variables**, lalu buat variabel `WORKER_URL` berisi alamat tadi.
-6. Jalankan **Perbarui data dan terbitkan situs**. Halaman **Cari** kini memakai pencarian semantik.
+6. Jalankan **Perbarui data dan terbitkan situs**. Halaman **Cari** kini memakai pencarian semantik, dan setiap halaman makalah punya kotak **Tanya makalah ini**.
 
-Tanpa langkah ini, halaman Cari tetap berjalan dengan kecocokan kata kunci, dan daftar makalah serupa tetap muncul.
+Tanpa langkah ini, halaman Cari tetap berjalan dengan kecocokan kata kunci, daftar makalah serupa tetap muncul, dan kotak tanya jawab tidak ditampilkan.
+
+Model tanya jawab diatur di `ASK_MODELS` pada `worker/wrangler.toml` (dicoba berurutan jika model sebelumnya sibuk atau kuotanya habis). Alamat situs tempat Worker mengambil `qa/<id>.json` diatur di `SITE_URL`.
 
 ## Memperluas cakupan
 
@@ -78,7 +84,7 @@ Hanya butuh Python 3.11 ke atas. Tidak ada pustaka tambahan.
 
 ```bash
 python -m unittest discover -s tests -t .      # pengujian
-node --test worker/index.test.mjs              # pengujian Worker (Node 20 ke atas)
+node --test worker/index.test.mjs worker/ask.test.mjs   # pengujian Worker (Node 20 ke atas)
 export GEMINI_API_KEY=...                      # opsional
 python -m lentera update                       # ambil data (lihat --help untuk opsi)
 python -m lentera build --out _site            # bangun situs
@@ -90,7 +96,8 @@ python -m http.server -d _site 8000            # buka http://localhost:8000
 - **Gemini**: kuota harian terbatas, jadi maksimal 40 ringkasan baru per hari (bisa diatur di `[summaries]`). Pada versi gratis, Google boleh memakai data permintaan untuk meningkatkan layanannya. Yang dikirim hanya makalah akses terbuka yang memang sudah publik.
 - **OpenAlex**: 100.000 kredit per hari dengan kunci gratis; satu pencarian memakai 10 kredit, dan situs ini hanya memakai beberapa pencarian per hari.
 - **Embedding Gemini**: kuotanya terpisah dari kuota ringkasan. Makalah dikirim per 25 dengan jeda 20 detik. Pada jalankan pertama, sekitar 600 makalah membutuhkan kurang lebih 8 menit; selanjutnya hanya makalah baru.
-- **Cloudflare Workers**: 100.000 permintaan per hari pada paket gratis. Worker membatasi 30 pencarian per menit untuk setiap alamat IP dan hanya melayani halaman Lentera Riset.
+- **Cloudflare Workers**: 100.000 permintaan per hari pada paket gratis. Worker membatasi 30 pencarian dan 6 pertanyaan per menit untuk setiap alamat IP, dan hanya melayani halaman Lentera Riset.
+- **Tanya jawab** memakai kunci Gemini yang sama dengan ringkasan harian. Kuota harian Gemini dihitung per model, dan urutan model di `ASK_MODELS` sama dengan urutan model ringkasan, jadi jika pengunjung menghabiskan kuota satu model, alur kerja harian otomatis beralih ke model berikutnya. Setiap pertanyaan tentang makalah ber-PDF membawa seluruh isi makalah, jadi memakai lebih banyak token daripada ringkasan dari abstrak.
 - **Makalah berbayar** (misalnya sebagian besar makalah IEEE) tidak punya PDF akses terbuka, jadi ringkasannya dibuat dari abstrak.
 - **arXiv**: jeda minimal 3 detik antarpermintaan sudah diterapkan. Saat bebannya tinggi, API arXiv kadang menolak dengan kode 406. Sistem akan mencoba ulang beberapa kali, dan jika tetap ditolak, makalah hari itu tetap masuk lewat umpan RSS.
 - **GitHub Actions dan Pages**: gratis tanpa batas untuk repositori publik.
@@ -98,7 +105,8 @@ python -m http.server -d _site 8000            # buka http://localhost:8000
 
 ## Rencana berikutnya
 
-- Tahap 3: tanya jawab tentang makalah, memakai Worker yang sama dan Gemini.
+- Tanya jawab lintas makalah (misalnya "makalah mana saja yang membangun korpus bahasa Bali?"), memakai pencarian semantik untuk memilih makalah lalu Gemini untuk menjawab.
+- Jawaban yang tampil bertahap (*streaming*) supaya pengunjung tidak menunggu jawaban utuh.
 
 ## Atribusi
 

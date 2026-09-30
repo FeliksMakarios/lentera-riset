@@ -19,7 +19,7 @@ import struct
 import time
 from pathlib import Path
 
-from . import http
+from . import http, relevance
 from .config import ROOT, Config
 
 API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:batchEmbedContents"
@@ -139,11 +139,10 @@ def update(config: Config, papers: dict, store: dict, *, api_key: str | None = N
         log("  [Embedding] GEMINI_API_KEY tidak diisi, langkah ini dilewati")
         return 0
 
-    min_rel = float(config.ranking.get("min_relevance", 2.0))
     max_chars = int(settings.get("max_chars", 1200))
     pending = []
     for paper in sorted(papers.values(), key=lambda p: p.get("score", 0), reverse=True):
-        if paper.get("relevance", 0) < min_rel:
+        if not relevance.is_relevant(config, paper):
             continue
         text = embed_text(paper, max_chars)
         h = text_hash(text, model, dims)

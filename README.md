@@ -78,6 +78,26 @@ Semua topik dan kata kunci ada di [`config/topics.toml`](config/topics.toml). Un
 
 Daftar tugas untuk saringan di halaman Makalah ada di blok `[[tasks]]`, dan daftar bahasa ada di blok `[[languages]]` pada berkas yang sama. Setiap bahasa punya `aliases`, yaitu nama-nama yang dicari di judul dan abstrak. Bahasa lain yang dicatat Gemini sebagai bahasa yang dikaji otomatis mendapat halaman jika muncul di minimal dua makalah (`auto_language_min_papers` di bagian `[search]`).
 
+### Menambahkan makalah secara manual
+
+Makalah yang tidak tertangkap otomatis (misalnya makalah lama, makalah di luar kata kunci topik, atau makalah di SSRN) bisa ditambahkan di [`config/manual.toml`](config/manual.toml). Cukup tulis satu pengenal per makalah:
+
+```toml
+[[papers]]
+arxiv = "2506.21563"           # ID arXiv
+
+[[papers]]
+acl = "2025.acl-long.1377"     # ID ACL Anthology
+
+[[papers]]
+doi = "10.2139/ssrn.6400298"   # DOI, diambil lewat OpenAlex
+
+[[papers]]
+title = "Judul lengkap makalah" # dicari lewat OpenAlex jika tidak ada ID
+```
+
+Pada jalankan harian berikutnya (atau jalankan **Perbarui data dan terbitkan situs** secara manual), metadatanya diambil, makalahnya diringkas lebih dulu daripada makalah lain, dan diberi vektor makna. Makalah pilihan selalu tampil di situs dan diberi keterangan "Pilihan pengelola" di halamannya. Entri yang gagal diambil dicoba lagi pada jalankan berikutnya dan dicatat di log.
+
 ## Menjalankan secara lokal
 
 Hanya butuh Python 3.11 ke atas. Tidak ada pustaka tambahan.

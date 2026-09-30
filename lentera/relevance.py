@@ -87,3 +87,8 @@ def score_paper(config: Config, paper: dict) -> dict:
     if not has_core or not has_nlp_context(config, paper):
         total = 0.0
     return {"relevance": round(total, 3), "topics": topics, "matched_keywords": matched_all}
+
+
+def is_relevant(config: Config, paper: dict) -> bool:
+    """Tampil di situs: relevansinya cukup, atau dipilih manual (config/manual.toml)."""
+    return bool(paper.get("manual")) or paper.get("relevance", 0) >= float(config.ranking.get("min_relevance", 2.0))

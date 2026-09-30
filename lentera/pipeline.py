@@ -7,7 +7,7 @@ import re
 import time
 from datetime import datetime, timezone
 
-from . import acl, arxiv, embeddings, fulltext, openalex, rank, relevance, signals, store
+from . import acl, arxiv, embeddings, fulltext, manual, openalex, rank, relevance, signals, store
 from .config import Config
 from .summarize import SUMMARY_VERSION, ModelBusy, QuotaExceeded, Summarizer
 
@@ -86,11 +86,11 @@ def needs_summary(paper: dict) -> bool:
 def summarize_pending(
     config: Config, papers: dict, summarizer: Summarizer, log=print, pdf_fetcher=fulltext.fetch_pdf
 ) -> int:
-    min_rel = float(config.ranking.get("min_relevance", 2.0))
     use_full_text = bool(config.summaries.get("use_full_text", True))
     max_pdf_mb = float(config.summaries.get("max_pdf_mb", fulltext.DEFAULT_MAX_MB))
-    pending = [p for p in papers.values() if p["relevance"] >= min_rel and needs_summary(p)]
-    pending.sort(key=lambda p: p.get("score", 0), reverse=True)
+    pending = [p for p in papers.values() if relevance.is_relevant(config, p) and needs_summary(p)]
+    # Makalah pilihan manual diringkas lebih dulu, lalu menurut skor.
+    pending.sort(key=lambda p: (bool(p.get("manual")), p.get("score", 0)), reverse=True)
     limit = int(config.summaries.get("max_per_run", 25))
     delay = float(config.summaries.get("request_delay_seconds", 7))
     max_busy = int(config.summaries.get("max_busy_papers", 4))
@@ -154,6 +154,11 @@ def fetch_all(config: Config, papers: dict, sources_state: dict, now: datetime, 
             log(f"  {added} makalah baru yang relevan dari OpenAlex")
         except Exception as exc:
             log(f"  [OpenAlex] gagal: {str(exc)[:200]}")
+    log("Memeriksa makalah pilihan manual (config/manual.toml)...")
+    try:
+        manual.fetch(config, papers, now, log=log)
+    except Exception as exc:
+        log(f"  [Manual] gagal: {str(exc)[:200]}")
     log(f"  Total tersimpan: {len(papers)} makalah")
 
 
@@ -173,7 +178,7 @@ def update(config: Config, *, fetch=True, collect_signals=True, summaries=True, 
         signal_days = float(config.signals.get("lookback_days", 30))
         recent = [
             p for p in papers.values()
-            if p.get("relevance", 0) >= float(config.ranking.get("min_relevance", 2.0))
+            if relevance.is_relevant(config, p)
             and rank.age_days(p, now) <= min(signal_days, config.lookback_days(p.get("source", "arxiv")))
         ]
         log(f"Mengumpulkan sinyal popularitas untuk {len(recent)} makalah...")

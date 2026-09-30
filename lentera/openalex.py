@@ -54,12 +54,17 @@ def build_filter(topic: Topic, since: str) -> str:
     ])
 
 
-def to_paper(work: dict) -> dict | None:
-    """Ubah satu work OpenAlex menjadi kamus makalah, atau None jika harus dilewati."""
+def to_paper(work: dict, strict: bool = True) -> dict | None:
+    """Ubah satu work OpenAlex menjadi kamus makalah, atau None jika harus dilewati.
+
+    Dengan `strict`, hanya makalah jurnal dan konferensi yang diambil (versi arXiv
+    datang dari sumber arXiv). Makalah pilihan manual memakai `strict=False`, jadi
+    repositori seperti SSRN juga diterima.
+    """
     primary = work.get("primary_location") or {}
     source = primary.get("source") or {}
     doi = (work.get("doi") or "").removeprefix("https://doi.org/").lower()
-    if doi.startswith(ARXIV_DOI_PREFIX) or source.get("type") not in ("journal", "conference"):
+    if strict and (doi.startswith(ARXIV_DOI_PREFIX) or source.get("type") not in ("journal", "conference")):
         return None
     title = work.get("display_name") or ""
     if not title:

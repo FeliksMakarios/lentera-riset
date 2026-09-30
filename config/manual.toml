@@ -1,0 +1,160 @@
+# Makalah pilihan yang ditambahkan secara manual ke Lentera Riset.
+#
+# Setiap entri cukup memakai SATU pengenal:
+#   arxiv = "2506.21563"            ID arXiv (tanpa versi)
+#   acl   = "2025.acl-long.1377"    ID ACL Anthology
+#   doi   = "10.2139/ssrn.6400298"  DOI, diambil lewat OpenAlex
+#   title = "Judul lengkap"         dicari lewat OpenAlex jika tidak ada ID
+# `note` hanya catatan untuk pengelola dan tidak ditampilkan di situs.
+#
+# Alur kerja harian mengambil metadata makalah yang belum tersimpan, lalu
+# makalah itu diringkas lebih dulu dan diberi vektor makna seperti makalah lain.
+# Makalah pilihan selalu tampil di situs, meskipun tidak cocok dengan kata kunci
+# topik atau sudah lebih tua dari batas `lookback_days`. Entri yang gagal
+# diambil dicoba lagi pada jalankan berikutnya.
+
+# Tambahan 30 September 2026
+
+[[papers]]
+arxiv = "2506.21563"
+note = "FormosanBench: Benchmarking Low-Resource Austronesian Languages in the Era of LLMs"
+
+[[papers]]
+arxiv = "2603.10006"
+note = "TOBA-LM (Indonesia, Batak, Minangkabau, Engram Memory); versi SSRN: 10.2139/ssrn.6400298"
+
+[[papers]]
+title = "Batak Toba Language-Indonesian Machine Translation with Transfer Learning using No Language Left Behind"
+note = "Hanya ditemukan di academia.edu/126883199; dicari lewat OpenAlex berdasarkan judul"
+
+[[papers]]
+acl = "2025.acl-long.1377"
+note = "NusaAksara: benchmark aksara daerah Indonesia (ACL 2025)"
+
+[[papers]]
+arxiv = "2508.07069"
+note = "SEADialogues"
+
+[[papers]]
+arxiv = "2605.19066"
+note = "The Annotation Scarcity Paradox"
+
+[[papers]]
+arxiv = "2510.01220"
+note = "Towards Open-Ended Discovery for Low-Resource NLP"
+
+[[papers]]
+arxiv = "2603.15569"
+note = "Mamba-3 (ICLR 2026)"
+
+[[papers]]
+acl = "2026.acl-long.689"
+note = "The Imperfective Paradox in Large Language Models (ACL 2026)"
+
+[[papers]]
+arxiv = "2602.21978"
+note = "CxMP: benchmark pasangan minimal construction grammar (ACL 2026)"
+
+[[papers]]
+acl = "2026.acl-demo.62"
+note = "olmOCR (ACL 2026 Demo)"
+
+[[papers]]
+acl = "2026.acl-long.24"
+note = "MauBERT (ACL 2026)"
+
+[[papers]]
+arxiv = "2603.15949"
+note = "BanglaSocialBench (ACL 2026)"
+
+[[papers]]
+arxiv = "2604.15647"
+note = "CIG: Conversational Information Gain (ACL 2026 best paper)"
+
+[[papers]]
+arxiv = "2602.06998"
+note = "Tokenisasi berbasis suku kata untuk bahasa Austronesia Nusantara"
+
+[[papers]]
+acl = "2026.acl-long.1739"
+note = "Characterizing the Expressivity of Local Attention (ACL 2026)"
+
+[[papers]]
+acl = "2026.findings-eacl.4"
+note = "AHaBench (Findings of EACL 2026)"
+
+[[papers]]
+arxiv = "2512.19630"
+note = "Restorasi diakritik bahasa Bribri dan Cook Islands Maori"
+
+[[papers]]
+arxiv = "2602.16852"
+note = "Meenz bleibt Meenz (LREC 2026)"
+
+[[papers]]
+arxiv = "2608.04056"
+note = "Sexism detection, multi-agent perspectivist preference optimization"
+
+[[papers]]
+acl = "2025.winlp-main.16"
+note = "ASR Under Noise: Whisper untuk bahasa Jawa dan Sunda (WiNLP 2025)"
+
+[[papers]]
+arxiv = "2602.04764"
+note = "In-context learning berskala besar untuk MT bahasa Jawa dan Sunda (LoResLM 2026)"
+
+[[papers]]
+arxiv = "2608.18066"
+note = "On the Fragility of Self-Improving Agents"
+
+[[papers]]
+arxiv = "2608.00205"
+note = "Averaging Bias in Human Faithfulness Annotations"
+
+[[papers]]
+acl = "2025.mrl-main.8"
+note = "Meta-pretraining NER lintas bahasa untuk bahasa Filipina (MRL 2025)"
+
+[[papers]]
+acl = "2025.emnlp-main.127"
+note = "FilBench (EMNLP 2025)"
+
+[[papers]]
+arxiv = "2609.10715"
+note = "NCP-ArchPreview Technical Report"
+
+[[papers]]
+arxiv = "2609.24967"
+note = "Emergent Collusion in Long-Horizon LLM Agent Interaction"
+
+[[papers]]
+arxiv = "2609.00605"
+note = "Confess What You Know (EMNLP 2026)"
+
+[[papers]]
+arxiv = "2607.21016"
+note = "CultureTalk-ID"
+
+[[papers]]
+arxiv = "2609.09974"
+note = "Stress-aware Filipino G2P (sudah tersimpan sebelumnya)"
+
+[[papers]]
+arxiv = "2609.10445"
+note = "Building Multilingual Bridges: data mixing untuk in-language reasoning"
+
+[[papers]]
+arxiv = "2609.19885"
+note = "Evaluating Communicative Success in Machine-Translated Conversation (sudah tersimpan sebelumnya)"
+
+[[papers]]
+arxiv = "2609.10745"
+note = "Think Before You Link (sudah tersimpan sebelumnya)"
+
+[[papers]]
+arxiv = "2609.18310"
+note = "SEA-LION-v4.8 (sudah tersimpan sebelumnya)"
+
+[[papers]]
+arxiv = "2609.13615"
+note = "Melbourne WMT 2026 CreoleMT (sudah tersimpan sebelumnya)"

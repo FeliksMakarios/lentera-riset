@@ -449,6 +449,8 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
         abstract_html = f'<section class="abstract-open"><h2>Abstrak</h2><p lang="en">{esc(paper["abstract"] or "Abstrak tidak tersedia.")}</p></section>'
 
     extra = ""
+    if paper.get("manual"):
+        extra += "<li><b>Pilihan pengelola:</b> ditambahkan secara manual ke koleksi (config/manual.toml).</li>"
     if paper.get("comment"):
         extra += f"<li><b>Catatan penulis:</b> {esc(paper['comment'])}</li>"
     if paper.get("journal_ref"):
@@ -561,8 +563,7 @@ def relevant_papers(config: Config, papers: dict) -> list[dict]:
     """
     for paper in papers.values():
         paper.update(relevance.score_paper(config, paper))
-    min_rel = float(config.ranking.get("min_relevance", 2.0))
-    relevant = [p for p in papers.values() if p.get("relevance", 0) >= min_rel]
+    relevant = [p for p in papers.values() if relevance.is_relevant(config, p)]
     return sorted(relevant, key=lambda p: p.get("score", 0), reverse=True)
 
 

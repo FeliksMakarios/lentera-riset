@@ -203,7 +203,7 @@ class MarkupTest(unittest.TestCase):
         summary = copy.deepcopy(SUMMARY)
         summary["sections"]["method"]["en"] = "Uses *large language models*."
         html = build.structured_summary(summary)
-        en_part = html.split('<div class="summary-col" lang="en">')[3]
+        en_part = html.split('<div class="summary-text" lang="en" data-l="en">')[4]
         self.assertNotIn("<em>", en_part.split("</div>")[0])
         self.assertIn("Uses large language models.", html)
         self.assertIn("<em>fine-tuning</em>", html)

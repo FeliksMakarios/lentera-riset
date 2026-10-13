@@ -225,3 +225,15 @@ test("tanda pisah panjang diganti", () => {
   assert.equal(tidy("Hasilnya baik — terutama untuk Jawa."), "Hasilnya baik, terutama untuk Jawa.");
   assert.equal(tidy("skor naik 10–20 poin"), "skor naik 10-20 poin");
 });
+
+test("pertanyaan dengan kutipan boleh lebih dari 500 karakter, tetapi tetap dibatasi", async () => {
+  const calls = mockNetwork();
+  const quoted = 'Kutipan dari halaman makalah: "' + "a".repeat(600) + '"\n\nPertanyaan: Apa maksudnya?';
+  await worker.fetch(ask({ paper: "2609.1", question: quoted, file: FILE }), env);
+  const sent = JSON.parse(calls.at(-1).init.body);
+  assert.equal(sent.contents.at(-1).parts.at(-1).text, quoted);
+
+  await worker.fetch(ask({ paper: "2609.1", question: "b".repeat(5000), file: FILE }), env);
+  const capped = JSON.parse(calls.at(-1).init.body);
+  assert.equal(capped.contents.at(-1).parts.at(-1).text.length, 1200);
+});

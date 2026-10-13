@@ -53,14 +53,22 @@ class AskBuildTest(unittest.TestCase):
         html = (self.build() / "papers/2609.01234.html").read_text()
         self.assertNotIn('id="tanya"', html)
         self.assertNotIn("ask.js", html)
+        self.assertNotIn("paper-layout", html)
+        self.assertNotIn('class="ask-section"', html)
+        self.assertIn('src="../assets/paper.js"', html)
 
         html = (self.build(WORKER) / "papers/2609.01234.html").read_text()
-        self.assertIn('<section class="ask" id="tanya" data-paper="2609.01234">', html)
+        self.assertIn('<aside class="ask-panel" id="tanya" data-paper="2609.01234"', html)
+        self.assertIn('<div class="paper-layout" id="paper-layout" data-ask="open">', html)
+        self.assertIn('<main class="wrap wrap-wide">', html)
+        self.assertIn('class="ask-fab" id="ask-open"', html)
+        self.assertIn('id="ask-resize" role="separator"', html)
+        self.assertLess(html.index('src="../assets/paper.js"'), html.index('src="../assets/ask.js"'))
         self.assertIn(f'data-worker="{WORKER}"', html)
         self.assertIn('src="../assets/ask.js"', html)
-        self.assertIn('href="#tanya">Tanya makalah ini</a>', html)
+        self.assertIn('href="#tanya" id="ask-jump">Tanya makalah ini</a>', html)
         self.assertIn("dari isi lengkap makalah (PDF akses terbuka)", html)
-        self.assertEqual(html.count('class="ask-chip"'), len(build.ASK_SUGGESTIONS))
+        self.assertEqual(html.count('class="ask-card"'), len(build.ASK_SUGGESTIONS))
 
     def test_ask_box_without_pdf_says_so(self):
         paper = copy.deepcopy(self.papers["2609.01234"])
@@ -69,9 +77,9 @@ class AskBuildTest(unittest.TestCase):
         self.assertIn("hanya dari abstrak dan ringkasan", html)
 
     def test_no_em_dash_in_ask_ui(self):
-        html = build.ask_html(self.papers["2609.01234"])
-        script = (ROOT / "static/ask.js").read_text()
-        for text in (html, script):
+        html = build.ask_html(self.papers["2609.01234"]) + build.ask_launcher()
+        scripts = [(ROOT / "static" / name).read_text() for name in ("ask.js", "paper.js")]
+        for text in [html, *scripts]:
             self.assertNotIn("—", text)
 
     def test_legacy_summary_text(self):

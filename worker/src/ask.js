@@ -2,7 +2,8 @@
 //
 // Permintaan: { paper, question, history?, file? }
 //   paper     nama berkas halaman makalah tanpa .html, misalnya "2609.27032"
-//   question  pertanyaan pengguna, paling panjang 500 karakter
+//   question  pertanyaan pengguna, paling panjang 1200 karakter (500 untuk pertanyaan
+//             ditambah kutipan teks dari halaman makalah yang dipilih pengguna)
 //   history   percakapan sebelumnya [{ role: "user" | "model", text }]
 //   file      alamat PDF di Gemini Files API dari jawaban sebelumnya, supaya PDF
 //             tidak diunduh dan diunggah ulang untuk setiap pertanyaan
@@ -20,7 +21,7 @@ const UPLOAD_URL = "https://generativelanguage.googleapis.com/upload/v1beta/file
 const FILES_URL = "https://generativelanguage.googleapis.com/v1beta/";
 const FILE_URI = /^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/files\/[a-z0-9-]{1,64}$/;
 const PAPER_ID = /^[A-Za-z0-9._-]{1,120}$/;
-const MAX_QUESTION = 500;
+const MAX_QUESTION = 1200;
 const MAX_HISTORY = 6;
 const MAX_HISTORY_CHARS = 2000;
 const MAX_PDF_BYTES = 14 * 1024 * 1024;

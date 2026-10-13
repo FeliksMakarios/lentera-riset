@@ -95,12 +95,14 @@ NAV = [("beranda", "index.html", "Beranda"), ("makalah", "makalah.html", "Makala
 
 
 def page(title: str, body: str, *, root: str, config: Config, updated_at: str | None, description: str = "",
-         scripts: tuple[str, ...] = (), active: str = "", query: str = "", worker_url: str = "") -> str:
+         scripts: tuple[str, ...] = (), active: str = "", query: str = "", worker_url: str = "",
+         wide: bool = False) -> str:
     site = config.site
     extra_scripts = "".join(f'\n<script src="{root}assets/{name}" defer></script>' for name in scripts)
     desc = description or site.get("tagline", "")
     updated = f"Data diperbarui {date_id(updated_at)}." if updated_at else ""
     current = ' aria-current="page"'
+    wrap = "wrap wrap-wide" if wide else "wrap"
     nav = "".join(
         f'<a href="{root}{href}"{current if key == active else ""}>{label}</a>'
         for key, href, label in NAV
@@ -118,7 +120,7 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
 </head>
 <body data-root="{root}" data-worker="{esc(worker_url)}">
 <header class="site-header">
-  <div class="wrap header-inner">
+  <div class="{wrap} header-inner">
     <a class="brand" href="{root}index.html"><span class="brand-mark" aria-hidden="true"></span>{esc(site.get('title', 'Lentera Riset'))}</a>
     <form class="site-search" action="{root}cari.html" method="get" role="search">
       <label class="sr-only" for="site-q">Cari makalah berdasarkan makna</label>
@@ -128,11 +130,11 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
     <nav aria-label="Menu utama">{nav}</nav>
   </div>
 </header>
-<main class="wrap">
+<main class="{wrap}">
 {body}
 </main>
 <footer class="site-footer">
-  <div class="wrap">
+  <div class="{wrap}">
     <p>{updated} Metadata makalah dari <a href="https://arxiv.org">arXiv</a>, <a href="https://aclanthology.org">ACL Anthology</a>, dan <a href="https://openalex.org">OpenAlex</a>. Thank you to arXiv for use of its open access interoperability.</p>
     <p>Ringkasan dibuat otomatis oleh model bahasa dan bisa keliru. Selalu periksa makalah aslinya. <a href="{esc(site.get('repo_url', '#'))}">Kode sumber</a>.</p>
   </div>
@@ -310,27 +312,58 @@ def search_body(config: Config) -> str:
 def legacy_summary(summary: dict) -> str:
     """Ringkasan format lama (sebelum enam bagian), ditampilkan sampai dibuat ulang."""
     cols = []
-    for lang, heading in (("id", "Bahasa Indonesia"), ("en", "English")):
-        part = summary[lang]
+    for lang in ("id", "en"):
         fmt = inline if lang == "id" else plain
-        cols.append(f'''<div class="summary-col" lang="{lang}"><h3>{heading}</h3>{paragraphs(part.get("summary", ""), fmt)}</div>''')
-    return f'<div class="compare">{"".join(cols)}</div>'
+        text = paragraphs(summary[lang].get("summary", ""), fmt)
+        cols.append(f'<div class="summary-col" lang="{lang}" data-l="{lang}">{text}</div>')
+    return "".join(cols)
 
 
-def structured_summary(summary: dict) -> str:
-    """Enam bagian ringkasan; tiap bagian menampilkan versi Indonesia dan Inggris berdampingan."""
+def first_sentence(text: str, limit: int = 220) -> str:
+    """Kalimat pertama sebuah bagian, untuk cuplikan saat bagian itu tertutup."""
+    flat = " ".join((text or "").split())
+    match = re.match(r"(.+?[.!?])(\s|$)", flat)
+    sentence = match.group(1) if match else flat
+    if len(sentence) > limit:
+        sentence = sentence[:limit].rsplit(" ", 1)[0] + "..."
+    return sentence
+
+
+ASK_SECTION_ICON = (
+    '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6'
+    'A8 8 0 1 1 21 12Z"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.3 2.4c-.5.2-.8.6-.8 1.1v.5"/><path d="M12 16.5h.01"/></svg>'
+)
+
+
+def structured_summary(summary: dict, ask: bool = False) -> str:
+    """Enam bagian ringkasan yang bisa dibuka dan ditutup. Versi Indonesia dan Inggris sama-sama
+    ada di halaman; static/paper.js menampilkan salah satunya sesuai pilihan pembaca."""
     blocks = []
     for key, title_id, title_en in SECTIONS:
         part = summary["sections"].get(key)
         if not part:
             continue
-        blocks.append(f"""<section class="summary-section" id="{key}">
-  <h3>{esc(title_id)} <span class="en-title" lang="en">{esc(title_en)}</span></h3>
-  <div class="compare">
-    <div class="summary-col" lang="id"><span class="col-label">Indonesia</span>{paragraphs(part['id'], inline)}</div>
-    <div class="summary-col" lang="en"><span class="col-label">English</span>{paragraphs(part['en'], plain)}</div>
-  </div>
-</section>""")
+        ask_button = (
+            f'<button type="button" class="ask-section" data-section-id="{esc(title_id)}" '
+            f'data-section-en="{esc(title_en)}" aria-label="Tanyakan bagian {esc(title_id)}" '
+            f'title="Tanyakan bagian ini">{ASK_SECTION_ICON}</button>'
+            if ask else ""
+        )
+        blocks.append(f"""<div class="summary-section" id="{key}">
+  <details>
+    <summary>
+      <span class="sec-title"><span data-l="id">{esc(title_id)}</span><span data-l="en" lang="en">{esc(title_en)}</span></span>
+      <span class="sec-snippet" data-l="id">{inline(first_sentence(part['id']))}</span>
+      <span class="sec-snippet" data-l="en" lang="en">{plain(first_sentence(part['en']))}</span>
+    </summary>
+    <div class="sec-body">
+      <div class="summary-text" lang="id" data-l="id">{paragraphs(part['id'], inline)}</div>
+      <div class="summary-text" lang="en" data-l="en">{paragraphs(part['en'], plain)}</div>
+    </div>
+  </details>
+  {ask_button}
+</div>""")
     return "\n".join(blocks)
 
 
@@ -363,37 +396,79 @@ def similar_html(items: list[dict]) -> str:
   </section>"""
 
 
+def icon(paths: str, size: int = 18) -> str:
+    return (f'<svg aria-hidden="true" viewBox="0 0 24 24" width="{size}" height="{size}" fill="none" '
+            f'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{paths}</svg>')
+
+
+# Kartu saran pertanyaan di panel tanya jawab: (ikon, pertanyaan).
 ASK_SUGGESTIONS = [
-    "Apa kontribusi utama makalah ini?",
-    "Data apa yang dipakai dan dari mana asalnya?",
-    "Seberapa baik hasilnya dibandingkan metode lain?",
-    "Apa keterbatasan penelitian ini?",
+    (icon('<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/>'
+          '<path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>'),
+     "Data apa yang dipakai dan seberapa besar?"),
+    (icon('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18Z"/>'),
+     "Bahasa apa saja yang dicakup dan bagaimana hasilnya per bahasa?"),
+    (icon('<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4"/><path d="M12 17h.01"/>'),
+     "Apa keterbatasan utama penelitian ini?"),
+    (icon('<path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="m3 6 1 1 2-2"/>'
+          '<path d="m3 12 1 1 2-2"/><path d="m3 18 1 1 2-2"/>'),
+     "Bagaimana cara mereproduksi eksperimennya?"),
 ]
+CLOSE_ICON = icon('<path d="M6 6l12 12"/><path d="M18 6 6 18"/>')
+SEND_ICON = icon('<path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>')
+ASK_ICON = icon('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z"/>'
+                '<path d="M8.5 11h.01"/><path d="M12 11h.01"/><path d="M15.5 11h.01"/>', 22)
 
 
 def ask_html(paper: dict) -> str:
-    """Kotak tanya jawab; pertanyaan dikirim static/ask.js ke POST /ask di Worker."""
+    """Panel tanya jawab di sisi kanan halaman makalah (di ponsel menjadi panel dari bawah).
+    Pertanyaan dikirim static/ask.js ke POST /ask di Worker."""
     if paper.get("pdf_url"):
         basis = "dari isi lengkap makalah (PDF akses terbuka)"
     else:
         basis = "hanya dari abstrak dan ringkasan, karena PDF akses terbuka tidak tersedia"
-    suggestions = "".join(
-        f'<button type="button" class="ask-chip">{esc(q)}</button>' for q in ASK_SUGGESTIONS
+    cards = "".join(
+        f'<button type="button" class="ask-card"><span class="ask-card-icon">{svg}</span>'
+        f'<span class="ask-card-text">{esc(q)}</span></button>'
+        for svg, q in ASK_SUGGESTIONS
     )
-    return f"""<section class="ask" id="tanya" data-paper="{esc(slug(paper['id']))}">
-    <h2>Tanya makalah ini</h2>
-    <p class="note">Jawaban disusun oleh Gemini {basis}. Jawaban bisa keliru, jadi periksa kembali makalah aslinya.</p>
-    <div class="ask-log" id="ask-log" aria-live="polite"></div>
-    <div class="ask-suggest" id="ask-suggest">{suggestions}</div>
+    return f"""<aside class="ask-panel" id="tanya" data-paper="{esc(slug(paper['id']))}" aria-labelledby="ask-title">
+    <div class="ask-resize" id="ask-resize" role="separator" aria-orientation="vertical" tabindex="0"
+      aria-label="Ubah lebar panel tanya jawab" title="Geser untuk mengubah lebar panel, klik ganda untuk lebar bawaan"></div>
+    <div class="ask-head">
+      <h2 id="ask-title">Tanya makalah ini</h2>
+      <button type="button" class="link-button" id="ask-clear" hidden>Hapus percakapan</button>
+      <button type="button" class="ask-icon-btn" id="ask-close" aria-label="Tutup panel tanya jawab" title="Tutup panel">{CLOSE_ICON}</button>
+    </div>
+    <div class="ask-scroll" id="ask-scroll">
+      <p class="note">Jawaban disusun oleh Gemini {basis}. Jawaban bisa keliru, jadi periksa kembali makalah aslinya. Pilih teks di halaman untuk mengutipnya dalam pertanyaan.</p>
+      <div class="ask-cards" id="ask-suggest">{cards}</div>
+      <div class="ask-log" id="ask-log" aria-live="polite"></div>
+    </div>
     <form class="ask-form" id="ask-form">
-      <label class="sr-only" for="ask-q">Pertanyaan tentang makalah ini</label>
-      <textarea id="ask-q" rows="2" maxlength="500" placeholder="Tulis pertanyaan, misalnya: bahasa apa saja yang diuji?" required></textarea>
-      <div class="ask-actions">
-        <button type="button" class="link-button" id="ask-clear" hidden>Hapus percakapan</button>
-        <button type="submit" class="ask-send" id="ask-send">Tanya</button>
+      <div class="ask-quote" id="ask-quote" hidden>
+        <span class="ask-quote-text" id="ask-quote-text"></span>
+        <button type="button" class="ask-icon-btn" id="ask-quote-remove" aria-label="Hapus kutipan" title="Hapus kutipan">{CLOSE_ICON}</button>
+      </div>
+      <div class="ask-input">
+        <label class="sr-only" for="ask-q">Pertanyaan tentang makalah ini</label>
+        <textarea id="ask-q" rows="2" maxlength="500" placeholder="Tanyakan tentang makalah ini, atau pilih teks di halaman untuk dikutip..."></textarea>
+        <button type="submit" class="ask-send" id="ask-send" aria-label="Kirim pertanyaan" title="Kirim (Enter)">{SEND_ICON}</button>
       </div>
     </form>
-  </section>"""
+  </aside>"""
+
+
+def ask_launcher() -> str:
+    """Tombol mengambang untuk membuka panel tanya jawab, plus tombol kutip saat teks dipilih."""
+    return f"""<button type="button" class="ask-fab" id="ask-open" aria-controls="tanya" aria-expanded="false">{ASK_ICON}<span>Tanya makalah</span></button>
+<button type="button" class="quote-pop" id="quote-pop" hidden>Tanyakan ini</button>"""
+
+
+LANG_SWITCH = """<div class="lang-switch" role="group" aria-label="Bahasa ringkasan">
+    <button type="button" data-set-lang="id" aria-pressed="true">Indonesia</button>
+    <button type="button" data-set-lang="en" aria-pressed="false">English</button>
+  </div>"""
 
 
 def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, similar: list[dict] | None = None,
@@ -403,7 +478,7 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
         f'<a class="button" href="{esc(url)}" rel="noopener">{esc(label)}</a>' for label, url in links_for(paper)
     )
     if ask:
-        link_html = '<a class="button button-ask" href="#tanya">Tanya makalah ini</a>' + link_html
+        link_html = '<a class="button button-ask" href="#tanya" id="ask-jump">Tanya makalah ini</a>' + link_html
 
     matched = paper.get("matched_keywords") or {}
     matched_html = "".join(
@@ -415,8 +490,8 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
     tldr_html = (
         f"""<div class="tldr-card">
     <span class="tldr-label">TL;DR</span>
-    <p lang="id">{inline(pair[0])}</p>
-    <p class="tldr-en" lang="en">{plain(pair[1])}</p>
+    <p lang="id" data-l="id">{inline(pair[0])}</p>
+    <p class="tldr-en" lang="en" data-l="en">{plain(pair[1])}</p>
   </div>"""
         if pair else ""
     )
@@ -435,11 +510,16 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
             basis = "dari isi lengkap makalah (PDF)"
         else:
             basis = "hanya dari judul dan abstrak, karena PDF akses terbuka tidak tersedia"
-        body = structured_summary(summary) if "sections" in summary else legacy_summary(summary)
+        if "sections" in summary:
+            body = structured_summary(summary, ask)
+            tools = '<div class="summary-tools"><button type="button" class="link-button" id="sum-all" hidden>Buka semua bagian</button></div>'
+        else:
+            body, tools = legacy_summary(summary), ""
         summary_html = f"""<section class="summary">
   <h2>Ringkasan</h2>
   <p class="note">Dibuat otomatis oleh {esc(summary.get('model', 'model bahasa'))} {basis}. TL;DR di atas diringkas dari abstrak. Istilah bercetak miring sengaja dipertahankan dalam bahasa Inggris.</p>
   {langs_html}
+  {tools}
   {body}
 </section>
 {glossary_html}"""
@@ -460,9 +540,11 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
     meta = [date_id(paper["published"]), source_label(paper)]
     if paper.get("source", "arxiv") == "arxiv" and paper.get("categories"):
         meta.append(", ".join(paper["categories"]))
-    return f"""<p class="back"><a href="../makalah.html">&larr; Semua makalah</a></p>
-<article class="paper">
-  <div class="card-meta">{"".join(f"<span>{esc(m)}</span>" for m in meta)}</div>
+    article = f"""<article class="paper" data-summary-lang="id">
+  <div class="paper-top">
+    <div class="card-meta">{"".join(f"<span>{esc(m)}</span>" for m in meta)}</div>
+    {LANG_SWITCH if summary else ""}
+  </div>
   <h1 lang="en">{esc(paper['title'])}</h1>
   <p class="authors">{esc(', '.join(paper['authors']))}</p>
   {tldr_html}
@@ -470,13 +552,21 @@ def paper_body(config: Config, paper: dict, lang_pages: dict | None = None, simi
   <div class="links">{link_html}</div>
   {summary_html}
   {abstract_html}
-  {ask_html(paper) if ask else ""}
   {similar_html(similar or [])}
   <section class="details">
     <h2>Mengapa makalah ini muncul</h2>
     <ul>{matched_html}{extra}</ul>
   </section>
 </article>"""
+    back = '<p class="back"><a href="../makalah.html">&larr; Semua makalah</a></p>'
+    if not ask:
+        return f"{back}\n{article}"
+    return f"""{back}
+<div class="paper-layout" id="paper-layout" data-ask="open">
+{article}
+{ask_html(paper)}
+</div>
+{ask_launcher()}"""
 
 
 def about_body(config: Config) -> str:
@@ -703,7 +793,7 @@ def build_site(config: Config, out: Path, data: dict | None = None, vectors: dic
         ask = bool(worker_url)
         write(f"papers/{slug(paper['id'])}.html", f"{paper['title']} | {title}",
               paper_body(config, paper, lang_pages, near, ask=ask), "../", description=desc.replace("*", ""),
-              scripts=("ask.js",) if ask else (), worker_url=worker_url)
+              scripts=("paper.js", "ask.js") if ask else ("paper.js",), worker_url=worker_url, wide=ask)
         write_json(out / "qa" / f"{slug(paper['id'])}.json", qa_data(paper))
 
     write_json(out / "catalog.json", catalog_data(config, relevant, lang_pages))

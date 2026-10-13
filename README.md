@@ -1,6 +1,6 @@
 # Lentera Riset
 
-Pemantau riset NLP untuk **bahasa berdaya sumber rendah, bahasa daerah Indonesia, dan bahasa Austronesia lainnya**. Setiap hari, situs ini mengambil makalah baru dari arXiv, ACL Anthology, dan OpenAlex (jurnal seperti IEEE), mengurutkannya menurut relevansi dan keramaian, lalu membuat ringkasan dalam **bahasa Inggris dan bahasa Indonesia** secara berdampingan sebagai pembanding.
+Pemantau riset NLP untuk **bahasa berdaya sumber rendah, bahasa daerah Indonesia, dan bahasa Austronesia lainnya**. Setiap hari, situs ini mengambil makalah baru dari arXiv, ACL Anthology, dan OpenAlex (jurnal seperti IEEE), mengurutkannya menurut relevansi dan keramaian, lalu membuat ringkasan dalam **bahasa Inggris dan bahasa Indonesia**. Pembaca bisa beralih bahasa ringkasan dengan satu tombol.
 
 Terinspirasi oleh [Emergent Mind](https://www.emergentmind.com/), tetapi seluruhnya memakai layanan gratis.
 
@@ -15,14 +15,14 @@ Situs: <https://feliksmakarios.github.io/lentera-riset/>
 - Makalah yang sama dari beberapa sumber (misalnya versi arXiv dan versi ACL) digabung menjadi satu.
 - Skor relevansi per topik: bahasa Indonesia dan daerah, Austronesia lainnya, Asia Tenggara, berdaya sumber rendah, serta multibahasa.
 - Sinyal keramaian dari Hugging Face Papers, Hacker News, GitHub, dan jumlah sitasi Semantic Scholar.
-- Ringkasan dwibahasa dari Gemini yang **membaca isi lengkap makalah** (PDF akses terbuka), dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. Jika PDF tidak tersedia, ringkasan dibuat dari abstrak.
+- Ringkasan dwibahasa dari Gemini yang **membaca isi lengkap makalah** (PDF akses terbuka), dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. Jika PDF tidak tersedia, ringkasan dibuat dari abstrak. Setiap bagian tertutup di awal dan menampilkan satu baris cuplikan; pembaca membuka bagian yang ingin dibaca, atau semuanya sekaligus. Tombol **Indonesia | English** memilih bahasa ringkasan dan TL;DR, dan pilihannya diingat peramban.
 - TL;DR dua kalimat dari abstrak di bawah nama penulis, mirip TL;DR Semantic Scholar.
 - Istilah teknis yang lazim dipertahankan dalam bahasa Inggris dan dicetak miring, disertai glosarium berbahasa Indonesia.
 - **Beranda** dengan dua tab: "Sedang ramai" (10 makalah teramai) dan "Terbaru" (7 makalah per halaman). Keduanya diperbarui setiap hari.
 - **Kolom pencarian berdasarkan makna** di bagian atas setiap halaman, seperti di Hugging Face dan Semantic Scholar. Pertanyaan dalam bahasa Indonesia atau Inggris dicocokkan dengan makalah berdasarkan kedekatan makna, bukan hanya kesamaan kata. Hasilnya bisa disaring menurut rentang waktu, topik, dan bahasa. Jika Worker pencarian belum aktif, hasil memakai kecocokan kata kunci.
 - **Halaman Makalah** bergaya halaman Models di Hugging Face: panel kiri berisi saringan **Tugas** (misalnya terjemahan mesin, pengenalan ucapan, analisis sentimen), **Topik**, dan **Bahasa**, masing-masing dengan kolom untuk mencari pilihan. Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini; tugas dikenali dari kata kunci di `[[tasks]]`.
 - **Makalah serupa** di setiap halaman makalah, berdasarkan kedekatan makna judul dan abstrak.
-- **Tanya makalah ini**: kotak tanya jawab di setiap halaman makalah. Pengunjung bisa bertanya dalam bahasa Indonesia atau Inggris (misalnya "Data apa yang dipakai?"), dan Gemini menjawab berdasarkan isi lengkap makalah (PDF akses terbuka), atau abstrak dan ringkasan jika PDF tidak tersedia. Percakapan bisa berlanjut dengan pertanyaan susulan.
+- **Tanya makalah ini**: kotak tanya jawab di setiap halaman makalah. Pengunjung bisa bertanya dalam bahasa Indonesia atau Inggris (misalnya "Data apa yang dipakai?"), dan Gemini menjawab berdasarkan isi lengkap makalah (PDF akses terbuka), atau abstrak dan ringkasan jika PDF tidak tersedia. Percakapan bisa berlanjut dengan pertanyaan susulan. Di layar lebar, panelnya menempel di sisi kanan dan tetap terlihat saat halaman digulir; lebarnya bisa diatur dengan menarik tepi kiri panel, dan panel bisa ditutup. Di ponsel, panel dibuka lewat tombol mengambang. Ada kartu saran pertanyaan, ikon **Tanyakan bagian ini** di setiap bagian ringkasan, dan teks di halaman bisa dipilih lalu dikutip dalam pertanyaan.
 - Umpan RSS di `feed.xml`.
 
 ## Cara kerja

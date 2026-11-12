@@ -2,8 +2,9 @@ name: Perbarui data dan terbitkan situs
 
 on:
   schedule:
-    # Setiap hari pukul 23.00 UTC (06.00 WIB).
-    - cron: "0 23 * * *"
+    # Setiap hari pukul 22.17 UTC (05.17 WIB). Menit selain 0 dipilih karena awal jam
+    # adalah waktu tersibuk GitHub; run terjadwal tetap bisa tertunda hingga beberapa jam.
+    - cron: "17 22 * * *"
   workflow_dispatch:
   push:
     branches: [main]

@@ -15,6 +15,20 @@ ASK_MODELS = "gemini-flash-lite-latest,gemini-flash-latest"
 SITE_URL = "https://feliksmakarios.github.io/lentera-riset/"
 # Asal halaman yang boleh memakai Worker ini, dipisahkan koma.
 ALLOWED_ORIGINS = "https://feliksmakarios.github.io,http://localhost:8000,http://127.0.0.1:8000"
+# Batas harian untuk semua pengunjung (bukan per IP), dihitung per hari UTC. Setelah batas
+# tercapai, Worker menolak dengan kode 429 sampai hari berganti. Isi "0" untuk mematikan.
+ASK_DAILY_LIMIT = "300"
+EMBED_DAILY_LIMIT = "3000"
+
+# Penghitung batas harian (worker/src/usage.js). Durable Object berbasis SQLite tersedia
+# di paket gratis Cloudflare.
+[[durable_objects.bindings]]
+name = "USAGE"
+class_name = "UsageCounter"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UsageCounter"]
 
 # Batas 30 pencarian per menit untuk setiap alamat IP, supaya kuota Gemini tidak
 # dihabiskan oleh satu pengguna.

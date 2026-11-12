@@ -1,26 +1,10 @@
-// Halaman makalah: pilihan bahasa ringkasan (Indonesia atau English) dan bagian
-// ringkasan yang bisa dibuka dan ditutup. Kedua versi bahasa sudah ada di HTML;
-// skrip ini hanya memilih mana yang tampil dan mengingat pilihan pembaca.
+// Halaman makalah: bagian ringkasan yang bisa dibuka dan ditutup, label bahasa tambahan,
+// kutipan (APA dan BibTeX), dan tombol salin tautan. Pilihan bahasa ringkasan (Indonesia
+// atau English) diatur app.js untuk seluruh situs.
 (function () {
   var L = window.Lentera;
   var article = document.querySelector("article.paper");
   if (!L || !article) return;
-
-  var switches = article.querySelectorAll("[data-set-lang]");
-  function setLang(lang) {
-    if (lang !== "id" && lang !== "en") lang = "id";
-    article.dataset.summaryLang = lang;
-    Array.prototype.forEach.call(switches, function (b) {
-      b.setAttribute("aria-pressed", b.dataset.setLang === lang ? "true" : "false");
-    });
-  }
-  Array.prototype.forEach.call(switches, function (b) {
-    b.addEventListener("click", function () {
-      setLang(b.dataset.setLang);
-      L.remember("bahasa-ringkasan", b.dataset.setLang);
-    });
-  });
-  setLang(L.recall("bahasa-ringkasan") || "id");
 
   // Buka semua / tutup semua bagian ringkasan.
   var sections = article.querySelectorAll(".summary-section > details");
@@ -42,12 +26,14 @@
     });
   }
 
-  // Tautan langsung ke satu bagian (misalnya #method) membuka bagian itu.
+  // Tautan langsung ke satu bagian (misalnya #method atau #kutip) membuka bagian itu.
   function openFromHash() {
     var id = decodeURIComponent(location.hash.slice(1));
     if (!id) return;
     var target = document.getElementById(id);
-    var details = target && target.classList.contains("summary-section") && target.querySelector("details");
+    if (!target) return;
+    var details = target.tagName === "DETAILS" ? target
+      : target.classList.contains("summary-section") && target.querySelector("details");
     if (details) {
       details.open = true;
       refreshAll();
@@ -57,4 +43,42 @@
   window.addEventListener("hashchange", openFromHash);
   openFromHash();
   refreshAll();
+
+  // Label bahasa yang dilipat: "+N bahasa lainnya".
+  var more = document.getElementById("chip-more");
+  if (more) {
+    more.hidden = false;
+    more.addEventListener("click", function () {
+      more.parentNode.classList.add("show-all");
+      more.hidden = true;
+    });
+  }
+
+  // Tombol "Kutip" membuka kotak kutipan meskipun alamatnya sudah berakhiran #kutip.
+  var cite = document.getElementById("kutip");
+  var citeJump = document.getElementById("cite-jump");
+  if (cite && citeJump) {
+    citeJump.addEventListener("click", function (e) {
+      e.preventDefault();
+      cite.open = true;
+      cite.scrollIntoView({ behavior: "smooth", block: "start" });
+      history.replaceState(null, "", "#kutip");
+    });
+  }
+
+  // Salin kutipan dan salin tautan halaman.
+  Array.prototype.forEach.call(document.querySelectorAll("[data-copy]"), function (button) {
+    var source = document.getElementById(button.dataset.copy);
+    if (!source) return;
+    button.hidden = false;
+    button.addEventListener("click", function () { L.copyText(source.textContent, button); });
+  });
+  var copyLink = document.getElementById("copy-link");
+  if (copyLink) {
+    copyLink.hidden = false;
+    copyLink.addEventListener("click", function () {
+      var canonical = document.querySelector('link[rel="canonical"]');
+      L.copyText(canonical ? canonical.href : location.href.split("#")[0], copyLink);
+    });
+  }
 })();

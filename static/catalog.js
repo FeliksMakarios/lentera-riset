@@ -152,12 +152,12 @@
   function row(p) {
     var item = L.el("article", "row");
     var title = L.el("a", "row-title", p.title);
-    title.href = L.root + p.url;
+    title.href = L.paperUrl(p.id);
     item.appendChild(title);
     var meta = L.el("div", "row-meta");
     var parts = [];
     if (p.tasks.length) parts.push(p.tasks.slice(0, 2).map(function (t) { return nameOf("tugas", t); }).join(", "));
-    parts.push(p.date_label);
+    parts.push(L.dateLabel(p.date));
     parts.push(p.source);
     if (p.languages.length) parts.push(p.languages.slice(0, 3).map(function (l) { return nameOf("bahasa", l); }).join(", "));
     parts.forEach(function (text, i) {
@@ -186,11 +186,38 @@
     });
   }
 
+  // Ponsel dan tablet: saringan muncul dari bawah lewat tombol "Saring".
+  var facets = document.getElementById("facets");
+  var openBtn = document.getElementById("facet-open");
+  var closeBtn = document.getElementById("facet-close");
+  var doneBtn = document.getElementById("facet-done");
+  var activeCount = document.getElementById("facet-count");
+  function setSheet(open) {
+    facets.classList.toggle("open", open);
+    openBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    document.body.classList.toggle("facets-open", open);
+    if (open) facetFilter.focus({ preventScroll: true });
+    else openBtn.focus({ preventScroll: true });
+  }
+  openBtn.addEventListener("click", function () { setSheet(true); });
+  closeBtn.addEventListener("click", function () { setSheet(false); });
+  doneBtn.addEventListener("click", function () {
+    setSheet(false);
+    document.querySelector(".catalog-main").scrollIntoView({ block: "start" });
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && facets.classList.contains("open")) setSheet(false);
+  });
+
   function update() {
     renderFacets();
     renderActive();
     renderList();
     writeParams();
+    var n = ["tugas", "topik", "bahasa"].filter(function (k) { return state[k]; }).length;
+    activeCount.textContent = String(n);
+    activeCount.hidden = !n;
+    doneBtn.textContent = "Tampilkan " + count.textContent + " makalah";
   }
 
   facetTabs.forEach(function (tab) {

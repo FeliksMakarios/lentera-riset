@@ -8,7 +8,11 @@
 // POST /ask    Tanya jawab tentang satu makalah. Lihat ask.js.
 
 import { handleAsk } from "./ask.js";
+import { secondsToReset, takeDaily } from "./usage.js";
 import { GEMINI_URL, json } from "./util.js";
+
+// Durable Object untuk batas pemakaian harian; harus diekspor dari modul utama.
+export { UsageCounter } from "./usage.js";
 
 const MAX_CHARS = 300;
 
@@ -102,7 +106,10 @@ export default {
       return json({ ok: true, ...settings(env), key_configured: Boolean(env.GEMINI_API_KEY) }, 200, cors);
     }
 
-    const routes = { "/embed": [handleEmbed, env.LIMITER], "/ask": [handleAsk, env.ASK_LIMITER || env.LIMITER] };
+    const routes = {
+      "/embed": [handleEmbed, env.LIMITER, "embed", Number(env.EMBED_DAILY_LIMIT || 0)],
+      "/ask": [handleAsk, env.ASK_LIMITER || env.LIMITER, "ask", Number(env.ASK_DAILY_LIMIT || 0)],
+    };
     const route = routes[url.pathname];
     if (!route || request.method !== "POST") {
       return json({ error: "tidak ditemukan" }, 404, cors);
@@ -114,13 +121,22 @@ export default {
     if (!env.GEMINI_API_KEY) {
       return json({ error: "GEMINI_API_KEY belum diisi di Worker" }, 500, cors);
     }
-    const [handler, limiter] = route;
+    const [handler, limiter, kind, dailyLimit] = route;
     if (limiter) {
       const ip = request.headers.get("CF-Connecting-IP") || "anon";
       const { success } = await limiter.limit({ key: ip });
       if (!success) {
         return json({ error: "terlalu banyak permintaan, coba lagi sebentar lagi" }, 429, cors);
       }
+    }
+    // Batas harian untuk semua pengunjung, supaya kuota Gemini tidak habis.
+    const usage = await takeDaily(env, kind, dailyLimit);
+    if (!usage.ok) {
+      return json(
+        { error: "batas harian layanan ini sudah tercapai, coba lagi besok", code: "daily_limit" },
+        429,
+        { ...cors, "Retry-After": String(secondsToReset()) },
+      );
     }
     return handler(request, env, cors);
   },

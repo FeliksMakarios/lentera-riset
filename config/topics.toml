@@ -117,7 +117,9 @@ worker_url = ""
 similar_papers = 5
 # Bahasa yang tidak ada di daftar [[languages]] tetapi disebut Gemini sebagai
 # bahasa yang dikaji menjadi pilihan di saringan Bahasa jika muncul di sekian makalah.
-auto_language_min_papers = 2
+# Nama yang sama dengan ejaan berbeda ("Uyghur" dan "Uighur") disatukan dulu oleh
+# lentera/language_names.py, yang juga memberi nama Indonesianya ("Bahasa Spanyol").
+auto_language_min_papers = 5
 # Bahasa yang tidak dijadikan pilihan saringan (terlalu umum).
 ignore_languages = ["English"]
 

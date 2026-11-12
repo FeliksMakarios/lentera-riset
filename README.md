@@ -15,15 +15,17 @@ Situs: <https://feliksmakarios.github.io/lentera-riset/>
 - Makalah yang sama dari beberapa sumber (misalnya versi arXiv dan versi ACL) digabung menjadi satu.
 - Skor relevansi per topik: bahasa Indonesia dan daerah, Austronesia lainnya, Asia Tenggara, berdaya sumber rendah, serta multibahasa.
 - Sinyal keramaian dari Hugging Face Papers, Hacker News, GitHub, dan jumlah sitasi Semantic Scholar.
-- Ringkasan dwibahasa dari Gemini yang **membaca isi lengkap makalah** (PDF akses terbuka), dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. Jika PDF tidak tersedia, ringkasan dibuat dari abstrak. Setiap bagian tertutup di awal dan menampilkan satu baris cuplikan; pembaca membuka bagian yang ingin dibaca, atau semuanya sekaligus. Tombol **Indonesia | English** memilih bahasa ringkasan dan TL;DR, dan pilihannya diingat peramban.
+- Ringkasan dwibahasa dari Gemini yang **membaca isi lengkap makalah** (PDF akses terbuka), dengan enam bagian: latar belakang masalah, penelitian terkait, kontribusi dan kebaruan, metode, hasil dan pembahasan, serta penelitian selanjutnya. Jika PDF tidak tersedia, ringkasan dibuat dari abstrak. Setiap bagian tertutup di awal dan menampilkan satu baris cuplikan; pembaca membuka bagian yang ingin dibaca, atau semuanya sekaligus. Tombol **ID | EN** di kepala halaman (dan **Indonesia | English** di halaman makalah) memilih bahasa ringkasan dan TL;DR di seluruh situs, termasuk kartu di Beranda dan hasil pencarian, dan pilihannya diingat peramban.
 - TL;DR dua kalimat dari abstrak di bawah nama penulis, mirip TL;DR Semantic Scholar.
 - Istilah teknis yang lazim dipertahankan dalam bahasa Inggris dan dicetak miring, disertai glosarium berbahasa Indonesia.
-- **Beranda** dengan dua tab: "Sedang ramai" (10 makalah teramai) dan "Terbaru" (7 makalah per halaman). Keduanya diperbarui setiap hari.
+- **Beranda** dengan dua tab: "Sedang ramai" (10 makalah teramai) dan "Terbaru" (7 makalah per halaman). Keduanya diperbarui setiap hari. Di atasnya tampil tanggal pembaruan, jumlah makalah baru, jumlah makalah, dan jumlah bahasa. Makalah yang masuk pada pembaruan terakhir diberi label **Baru**.
 - **Kolom pencarian berdasarkan makna** di bagian atas setiap halaman, seperti di Hugging Face dan Semantic Scholar. Pertanyaan dalam bahasa Indonesia atau Inggris dicocokkan dengan makalah berdasarkan kedekatan makna, bukan hanya kesamaan kata. Hasilnya bisa disaring menurut rentang waktu, topik, dan bahasa. Jika Worker pencarian belum aktif, hasil memakai kecocokan kata kunci.
-- **Halaman Makalah** bergaya halaman Models di Hugging Face: panel kiri berisi saringan **Tugas** (misalnya terjemahan mesin, pengenalan ucapan, analisis sentimen), **Topik**, dan **Bahasa**, masing-masing dengan kolom untuk mencari pilihan. Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini; tugas dikenali dari kata kunci di `[[tasks]]`.
+- **Halaman Makalah** bergaya halaman Models di Hugging Face: panel kiri berisi saringan **Tugas** (misalnya terjemahan mesin, pengenalan ucapan, analisis sentimen), **Topik**, dan **Bahasa**, masing-masing dengan kolom untuk mencari pilihan. Bahasa dikenali dari judul dan abstrak serta dari daftar bahasa yang dikaji menurut ringkasan Gemini; tugas dikenali dari kata kunci di `[[tasks]]`. Nama bahasa dari Gemini diseragamkan lebih dulu (misalnya "Uighur" dan "Uyghur", atau "Farsi" dan "Persian", menjadi satu) dan ditampilkan dalam bahasa Indonesia ("Bahasa Spanyol"), lewat `lentera/language_names.py`. Di ponsel, saringan dibuka lewat tombol **Saring**.
 - **Makalah serupa** di setiap halaman makalah, berdasarkan kedekatan makna judul dan abstrak.
 - **Tanya makalah ini**: kotak tanya jawab di setiap halaman makalah. Pengunjung bisa bertanya dalam bahasa Indonesia atau Inggris (misalnya "Data apa yang dipakai?"), dan Gemini menjawab berdasarkan isi lengkap makalah (PDF akses terbuka), atau abstrak dan ringkasan jika PDF tidak tersedia. Percakapan bisa berlanjut dengan pertanyaan susulan. Di layar lebar, panelnya menempel di sisi kanan dan tetap terlihat saat halaman digulir; lebarnya bisa diatur dengan menarik tepi kiri panel, dan panel bisa ditutup. Di ponsel, panel dibuka lewat tombol mengambang. Ada kartu saran pertanyaan, ikon **Tanyakan bagian ini** di setiap bagian ringkasan, dan teks di halaman bisa dipilih lalu dikutip dalam pertanyaan.
-- Umpan RSS di `feed.xml`.
+- **Kutip** di setiap halaman makalah: sitasi APA dan BibTeX yang bisa disalin, plus tombol **Salin tautan**. Halaman makalah juga memuat meta `citation_*` (dibaca Zotero dan pengelola pustaka lain) dan data terstruktur `ScholarlyArticle`.
+- Nama venue yang panjang disingkat di kartu dan daftar (misalnya "LREC 2026" atau "Findings EMNLP 2026"); nama lengkapnya tetap ada di halaman makalah. Judul yang seluruhnya huruf kapital ditampilkan dengan huruf kapital di awal kata.
+- Umpan RSS di `feed.xml`, peta situs di `sitemap.xml`, dan halaman 404 sendiri.
 
 ## Cara kerja
 
@@ -35,7 +37,9 @@ Pengunjung ──► halaman Cari ──► Cloudflare Worker ──► embeddin
 Pengunjung ──► Tanya makalah ini ──► Cloudflare Worker ──► qa/<id>.json + PDF makalah ──► jawaban Gemini
 ```
 
-Semuanya berjalan di GitHub Actions setiap hari pukul 06.00 WIB. Data disimpan di `data/papers.json` dan `data/embeddings.json` di dalam repositori, jadi tidak perlu basis data. Makalah yang sudah diringkas tidak diringkas ulang, kecuali abstraknya berubah. Begitu pula vektornya.
+Semuanya berjalan di GitHub Actions setiap hari. Jadwalnya pukul 05.17 WIB (22.17 UTC); menit selain 0 dipilih karena awal jam adalah waktu tersibuk GitHub. GitHub sering menunda run terjadwal hingga beberapa jam, jadi data biasanya baru diperbarui pagi hari WIB. Data disimpan di `data/papers.json` dan `data/embeddings.json` di dalam repositori, jadi tidak perlu basis data. Makalah yang sudah diringkas tidak diringkas ulang, kecuali abstraknya berubah. Begitu pula vektornya.
+
+Data untuk peramban dipecah supaya halaman tetap ringan: `catalog.json` hanya berisi metadata untuk saringan (dipakai halaman Makalah), `texts.json` berisi TL;DR untuk kartu (dimuat tab Terbaru dan halaman Cari), dan `search-index.json` berisi vektor makna.
 
 Pencarian semantik bekerja begini: setiap makalah diubah menjadi vektor makna (embedding) dari judul dan abstraknya saat alur kerja harian berjalan. Saat pengunjung mencari, pertanyaannya diubah menjadi vektor oleh Cloudflare Worker kecil dengan model yang sama, lalu peramban mengurutkan makalah menurut kemiripan kosinus. Kunci Gemini hanya tersimpan di Worker, tidak pernah dikirim ke peramban.
 
@@ -64,7 +68,11 @@ Vektor makalah dibuat otomatis oleh alur kerja harian memakai `GEMINI_API_KEY`. 
 5. Buka **Settings > Secrets and variables > Actions**, tab **Variables**, lalu buat variabel `WORKER_URL` berisi alamat tadi.
 6. Jalankan **Perbarui data dan terbitkan situs**. Halaman **Cari** kini memakai pencarian semantik, dan setiap halaman makalah punya kotak **Tanya makalah ini**.
 
-Tanpa langkah ini, halaman Cari tetap berjalan dengan kecocokan kata kunci, daftar makalah serupa tetap muncul, dan kotak tanya jawab tidak ditampilkan.
+Tanpa langkah ini, halaman Cari tetap berjalan dengan kecocokan kata kunci (istilah Indonesia seperti "terjemahan mesin" atau "bahasa Jawa" dicocokkan juga dengan padanan Inggrisnya, nama bahasa, dan nama tugas), daftar makalah serupa tetap muncul, dan kotak tanya jawab tidak ditampilkan.
+
+**Opsional, untuk menjaga kuota ringkasan harian:** buat kunci Gemini kedua (sebaiknya dari proyek Google yang berbeda) dan simpan sebagai secret repositori `WORKER_GEMINI_API_KEY`, lalu jalankan ulang **Terbitkan Worker pencarian semantik**. Worker akan memakai kunci itu, sehingga pemakaian pengunjung tidak mengurangi kuota alur kerja harian. Tanpa secret itu, Worker memakai `GEMINI_API_KEY`.
+
+Selain batas per IP, Worker punya **batas harian untuk semua pengunjung**: `ASK_DAILY_LIMIT` (bawaan 300 pertanyaan) dan `EMBED_DAILY_LIMIT` (bawaan 3.000 pencarian) di `worker/wrangler.toml`, dihitung per hari UTC dengan Durable Object (tersedia di paket gratis Cloudflare). Setelah batas tercapai, Worker menolak dengan kode 429 sampai hari berganti, dan halaman Cari beralih ke kecocokan kata kunci.
 
 Model tanya jawab diatur di `ASK_MODELS` pada `worker/wrangler.toml` (dicoba berurutan jika model sebelumnya sibuk atau kuotanya habis). Alamat situs tempat Worker mengambil `qa/<id>.json` diatur di `SITE_URL`.
 
@@ -76,7 +84,7 @@ Semua topik dan kata kunci ada di [`config/topics.toml`](config/topics.toml). Un
 - `query = false`: kata kunci hanya dipakai untuk penilaian, tidak untuk mencari di arXiv. Cocok untuk kata yang terlalu umum seperti "multilingual".
 - `min_relevance` di bagian `[ranking]`: ambang minimum agar makalah disimpan.
 
-Daftar tugas untuk saringan di halaman Makalah ada di blok `[[tasks]]`, dan daftar bahasa ada di blok `[[languages]]` pada berkas yang sama. Setiap bahasa punya `aliases`, yaitu nama-nama yang dicari di judul dan abstrak. Bahasa lain yang dicatat Gemini sebagai bahasa yang dikaji otomatis mendapat halaman jika muncul di minimal dua makalah (`auto_language_min_papers` di bagian `[search]`).
+Daftar tugas untuk saringan di halaman Makalah ada di blok `[[tasks]]`, dan daftar bahasa ada di blok `[[languages]]` pada berkas yang sama. Setiap bahasa punya `aliases`, yaitu nama-nama yang dicari di judul dan abstrak. Bahasa lain yang dicatat Gemini sebagai bahasa yang dikaji otomatis menjadi pilihan saringan jika muncul di minimal lima makalah (`auto_language_min_papers` di bagian `[search]`). Ejaan lain dan nama Indonesianya diatur di `lentera/language_names.py`.
 
 ### Menambahkan makalah secara manual
 
@@ -116,7 +124,7 @@ python -m http.server -d _site 8000            # buka http://localhost:8000
 - **Gemini**: kuota harian terbatas, jadi maksimal 40 ringkasan baru per hari (bisa diatur di `[summaries]`). Pada versi gratis, Google boleh memakai data permintaan untuk meningkatkan layanannya. Yang dikirim hanya makalah akses terbuka yang memang sudah publik.
 - **OpenAlex**: 100.000 kredit per hari dengan kunci gratis; satu pencarian memakai 10 kredit, dan situs ini hanya memakai beberapa pencarian per hari.
 - **Embedding Gemini**: kuotanya terpisah dari kuota ringkasan. Makalah dikirim per 25 dengan jeda 20 detik. Pada jalankan pertama, sekitar 600 makalah membutuhkan kurang lebih 8 menit; selanjutnya hanya makalah baru.
-- **Cloudflare Workers**: 100.000 permintaan per hari pada paket gratis. Worker membatasi 30 pencarian dan 6 pertanyaan per menit untuk setiap alamat IP, dan hanya melayani halaman Lentera Riset.
+- **Cloudflare Workers**: 100.000 permintaan per hari pada paket gratis. Worker membatasi 30 pencarian dan 6 pertanyaan per menit untuk setiap alamat IP, serta 3.000 pencarian dan 300 pertanyaan per hari untuk semua pengunjung, dan hanya melayani halaman Lentera Riset.
 - **Tanya jawab** memakai kunci Gemini yang sama dengan ringkasan harian. Kuota harian Gemini dihitung per model, dan urutan model di `ASK_MODELS` sama dengan urutan model ringkasan, jadi jika pengunjung menghabiskan kuota satu model, alur kerja harian otomatis beralih ke model berikutnya. Setiap pertanyaan tentang makalah ber-PDF membawa seluruh isi makalah, jadi memakai lebih banyak token daripada ringkasan dari abstrak.
 - **Makalah berbayar** (misalnya sebagian besar makalah IEEE) tidak punya PDF akses terbuka, jadi ringkasannya dibuat dari abstrak.
 - **arXiv**: jeda minimal 3 detik antarpermintaan sudah diterapkan. Saat bebannya tinggi, API arXiv kadang menolak dengan kode 406. Sistem akan mencoba ulang beberapa kali, dan jika tetap ditolak, makalah hari itu tetap masuk lewat umpan RSS.

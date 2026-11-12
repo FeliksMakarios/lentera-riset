@@ -158,13 +158,15 @@ class LanguageTest(unittest.TestCase):
         self.assertEqual(languages.find(CONFIG, "Indonesian Sign Language recognition"), ["indonesian-sign"])
 
     def test_summary_languages_are_mapped_or_become_auto_pages(self):
+        config = copy.deepcopy(CONFIG)
+        config.search = {**CONFIG.search, "auto_language_min_papers": 2}
         summary = {**SUMMARY, "languages_studied": ["Javanese", "English", "Yoruba"]}
         papers = [
             paper("a", "A study", summary=summary),
             paper("b", "Another", summary={**SUMMARY, "languages_studied": ["Yoruba"]}),
             paper("c", "Third", summary={**SUMMARY, "languages_studied": ["Klingon"]}),
         ]
-        pages = languages.group_papers(CONFIG, papers)
+        pages = languages.group_papers(config, papers)
         self.assertIn("javanese", pages)
         self.assertIn("x-yoruba", pages)
         self.assertEqual(len(pages["x-yoruba"].papers), 2)
@@ -211,14 +213,16 @@ class Stage2BuildTest(unittest.TestCase):
         self.assertIn("mt", data["tasks"])
         self.assertEqual(data["tasks"]["mt"]["group"], "generation")
         item = next(p for p in data["papers"] if p["id"] == "2609.01234")
-        self.assertEqual(item["url"], "papers/2609.01234.html")
         self.assertIn("javanese", item["languages"])
         self.assertIn("mt", item["tasks"])
-        self.assertIn("*low-resource*", item["tldr"])
-        self.assertNotIn("*", item["tldr_en"])
-        other = next(p for p in data["papers"] if p["id"] == "2609.09999")
-        self.assertEqual(other["tldr"], "")
-        self.assertTrue(other["snippet"])
+        # Teks kartu dipisah ke texts.json supaya catalog.json tetap kecil.
+        self.assertNotIn("tldr", item)
+        texts = json.loads((self.out / "texts.json").read_text())
+        tldr_id, tldr_en = texts["2609.01234"]
+        self.assertIn("*low-resource*", tldr_id)
+        self.assertNotIn("*", tldr_en)
+        self.assertEqual(len(texts["2609.09999"]), 1)
+        self.assertTrue(texts["2609.09999"][0])
 
     def test_search_index_has_vectors(self):
         data = json.loads((self.out / "search-index.json").read_text())
@@ -229,7 +233,7 @@ class Stage2BuildTest(unittest.TestCase):
 
     def test_header_has_search_and_four_menu_items(self):
         html = (self.out / "index.html").read_text()
-        self.assertIn('<form class="site-search" action="cari.html"', html)
+        self.assertIn('<form class="site-search" id="site-search" action="cari.html"', html)
         nav = re.search(r'<nav aria-label="Menu utama">(.*?)</nav>', html).group(1)
         self.assertEqual(re.findall(r">([^<]+)</a>", nav), ["Beranda", "Makalah", "Tentang", "RSS"])
         self.assertIn('href="index.html" aria-current="page"', nav)

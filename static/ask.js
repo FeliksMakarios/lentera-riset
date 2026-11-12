@@ -135,6 +135,9 @@
   }
 
   function errorText(status, message) {
+    if (status === 429 && /harian/.test(message || "")) {
+      return "Batas pertanyaan harian untuk semua pengunjung sudah tercapai. Coba lagi besok.";
+    }
     if (status === 429) return "Terlalu banyak pertanyaan dalam waktu singkat. Tunggu sekitar satu menit, lalu coba lagi.";
     if (status === 503) return "Kuota Gemini sedang habis atau layanannya sibuk. Coba lagi beberapa saat lagi.";
     if (status === 404) return "Makalah ini belum dikenali layanan tanya jawab. Coba lagi setelah situs diperbarui.";
@@ -408,7 +411,7 @@
   article.addEventListener("click", function (e) {
     var btn = e.target.closest ? e.target.closest(".ask-section") : null;
     if (!btn) return;
-    var en = article.dataset.summaryLang === "en";
+    var en = L.currentLang() === "en";
     input.value = en
       ? 'Explain the "' + btn.dataset.sectionEn + '" section of this paper in more detail.'
       : 'Jelaskan lebih rinci bagian "' + btn.dataset.sectionId + '" dari makalah ini.';

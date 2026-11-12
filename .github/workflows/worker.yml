@@ -42,7 +42,10 @@ jobs:
           secrets: |
             GEMINI_API_KEY
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Kunci terpisah untuk Worker (secret WORKER_GEMINI_API_KEY) jika ada, supaya
+          # pemakaian pengunjung tidak menghabiskan kuota ringkasan harian. Tanpa secret itu,
+          # Worker memakai GEMINI_API_KEY yang sama dengan alur kerja harian.
+          GEMINI_API_KEY: ${{ secrets.WORKER_GEMINI_API_KEY || secrets.GEMINI_API_KEY }}
 
       - name: Tampilkan alamat Worker
         if: steps.check.outputs.skip != 'true'

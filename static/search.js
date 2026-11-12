@@ -76,7 +76,12 @@
       signal: controller ? controller.signal : undefined
     }).then(function (r) {
       if (timer) clearTimeout(timer);
-      if (r.status === 429) throw new Error("terlalu banyak permintaan, coba lagi sebentar lagi");
+      if (r.status === 429) {
+        return r.json().catch(function () { return {}; }).then(function (data) {
+          throw new Error(data.code === "daily_limit" ? "batas harian sudah tercapai"
+            : "terlalu banyak permintaan, coba lagi sebentar lagi");
+        });
+      }
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function (data) {
@@ -112,25 +117,88 @@
     return scored.slice(0, MAX_RESULTS);
   }
 
-  function keywordRank(catalog) {
-    var words = query.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(function (t) {
+  // Padanan istilah Indonesia ke Inggris, supaya pencarian kata kunci (cadangan saat Worker
+  // tidak bisa dipakai) tetap menemukan makalah berbahasa Inggris.
+  var SYNONYMS = {
+    "terjemahan mesin": "machine translation", "penerjemahan mesin": "machine translation",
+    "mesin penerjemah": "machine translation", "penerjemahan": "translation", "terjemahan": "translation",
+    "pengenalan ucapan": "speech recognition", "pengenalan suara": "speech recognition",
+    "sintesis ucapan": "speech synthesis text-to-speech", "ucapan": "speech", "suara": "speech",
+    "analisis sentimen": "sentiment analysis", "sentimen": "sentiment", "emosi": "emotion",
+    "ujaran kebencian": "hate speech", "berita palsu": "fake news", "hoaks": "hoax misinformation",
+    "peringkasan": "summarization", "ringkasan": "summarization", "tanya jawab": "question answering",
+    "klasifikasi teks": "text classification", "klasifikasi": "classification",
+    "entitas bernama": "named entity recognition", "korpus": "corpus", "kumpulan data": "dataset",
+    "set data": "dataset", "data paralel": "parallel corpus", "bahasa daerah": "regional language",
+    "bahasa lokal": "local language", "sumber daya rendah": "low-resource", "berdaya sumber rendah": "low-resource",
+    "model bahasa besar": "large language model llm", "model bahasa": "language model",
+    "alih kode": "code-switching", "campur kode": "code-mixing", "bahasa isyarat": "sign language",
+    "dialek": "dialect", "morfologi": "morphology", "tokenisasi": "tokenization",
+    "kelas kata": "part-of-speech pos tagging", "identifikasi bahasa": "language identification",
+    "evaluasi": "evaluation benchmark", "tolok ukur": "benchmark", "penalaran": "reasoning",
+    "temu kembali": "retrieval", "transliterasi": "transliteration", "normalisasi": "normalization",
+    "dokumentasi bahasa": "language documentation", "terancam punah": "endangered", "bias": "bias fairness",
+    "multibahasa": "multilingual", "lintas bahasa": "cross-lingual", "penyederhanaan": "simplification",
+    "pembangkitan teks": "text generation", "percakapan": "dialogue conversational", "anotasi": "annotation"
+  };
+
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function mentions(q, name) {
+    name = (name || "").toLowerCase().replace(/\s*\(.*?\)\s*/g, " ").replace(/^bahasa\s+/, "").trim();
+    if (name.length < 3) return false;
+    return new RegExp("(^|[^\\p{L}])" + escapeRe(name) + "($|[^\\p{L}])", "u").test(q);
+  }
+
+  // Kata pencarian beserta padanannya, dan bahasa serta tugas yang disebut di pertanyaan.
+  function understand(catalog) {
+    var q = query.toLowerCase();
+    var extra = [];
+    var langs = [];
+    var tasks = [];
+    Object.keys(SYNONYMS).forEach(function (k) {
+      if (mentions(q, k)) extra.push(SYNONYMS[k]);
+    });
+    Object.keys(catalog.languages).forEach(function (id) {
+      var lang = catalog.languages[id];
+      if (mentions(q, lang.name) || mentions(q, lang.en)) {
+        langs.push(id);
+        if (lang.en) extra.push(lang.en);
+      }
+    });
+    Object.keys(catalog.tasks).forEach(function (id) {
+      if (mentions(q, catalog.tasks[id].name)) tasks.push(id);
+    });
+    var words = (q + " " + extra.join(" ").toLowerCase()).split(/[^\p{L}\p{N}-]+/u).filter(function (t) {
       return t.length > 1 && STOPWORDS.indexOf(t) === -1;
     });
-    if (!words.length) words = [query.toLowerCase()];
+    words = words.filter(function (w, i) { return words.indexOf(w) === i; });
+    if (!words.length) words = [q];
+    return { words: words, phrases: extra.map(function (e) { return e.toLowerCase(); }), langs: langs, tasks: tasks };
+  }
+
+  function keywordRank(catalog, texts) {
+    var u = understand(catalog);
     var scored = [];
     catalog.papers.forEach(function (p) {
       if (!passes(p)) return;
       var t = p.title.toLowerCase();
       var a = p.authors.toLowerCase();
-      var rest = [p.tldr, p.tldr_en, p.snippet].concat(p.languages.map(function (l) {
-        return catalog.languages[l] ? catalog.languages[l].name : "";
+      var rest = (texts[p.id] || []).concat(p.languages.map(function (l) {
+        return catalog.languages[l] ? catalog.languages[l].name + " " + (catalog.languages[l].en || "") : "";
       })).join(" ").toLowerCase();
       var score = 0;
-      words.forEach(function (w) {
+      u.words.forEach(function (w) {
         if (t.indexOf(w) !== -1) score += 3;
         if (a.indexOf(w) !== -1) score += 2;
         if (rest.indexOf(w) !== -1) score += 1;
       });
+      u.phrases.forEach(function (ph) {
+        if (ph.indexOf(" ") === -1) return;
+        if (t.indexOf(ph) !== -1) score += 4;
+        else if (rest.indexOf(ph) !== -1) score += 2;
+      });
+      u.langs.forEach(function (l) { if (p.languages.indexOf(l) !== -1) score += 5; });
+      u.tasks.forEach(function (k) { if (p.tasks.indexOf(k) !== -1) score += 4; });
       if (score) scored.push({ paper: p, score: score });
     });
     scored.sort(function (x, y) { return y.score - x.score || y.paper.score - x.paper.score; });
@@ -138,16 +206,17 @@
   }
 
   var catalog = null;
+  var texts = {};
   var vectors = null;
   var queryVector = null;
   var mode = null;
   var note = "";
 
   function render() {
-    var items = mode === "semantic" ? semanticRank(catalog, vectors, queryVector) : keywordRank(catalog);
+    var items = mode === "semantic" ? semanticRank(catalog, vectors, queryVector) : keywordRank(catalog, texts);
     results.innerHTML = "";
     items.forEach(function (item) {
-      results.appendChild(L.renderCard(item.paper, catalog, mode === "semantic" ? { similarity: item.sim } : {}));
+      results.appendChild(L.renderCard(item.paper, catalog, mode === "semantic" ? { similarity: item.sim } : {}, texts));
     });
     var summary = items.length
       ? (mode === "semantic"
@@ -179,9 +248,14 @@
   document.title = query + " | " + document.title;
   setStatus("Mencari...");
 
-  Promise.all([L.loadJSON("catalog.json"), L.loadJSON("search-index.json").catch(function () { return null; })])
+  Promise.all([
+    L.loadJSON("catalog.json"),
+    L.loadJSON("search-index.json").catch(function () { return null; }),
+    L.loadJSON("texts.json").catch(function () { return {}; })
+  ])
     .then(function (loaded) {
       catalog = loaded[0];
+      texts = loaded[2] || {};
       fillLanguages(catalog, params.get("bahasa") || "");
       var index = loaded[1];
       if (!worker || !index || !Object.keys(index.vectors).length) {

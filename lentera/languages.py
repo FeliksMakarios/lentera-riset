@@ -15,6 +15,7 @@ import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 
+from . import language_names
 from .config import Config, Language
 
 
@@ -72,10 +73,11 @@ def slug(name: str) -> str:
 def detect(config: Config, paper: dict) -> tuple[list[str], list[str]]:
     """Kembalikan (ID bahasa di konfigurasi, nama bahasa lain dari ringkasan Gemini)."""
     ids = find(config, f"{paper.get('title', '')}\n{paper.get('abstract', '')}")
-    ignore = {n.lower() for n in config.search.get("ignore_languages", [])}
+    ignore = {language_names.canonical(n).lower() for n in config.search.get("ignore_languages", [])}
     extra: list[str] = []
-    for name in (paper.get("summary") or {}).get("languages_studied") or []:
-        if name.lower() in ignore:
+    for raw in (paper.get("summary") or {}).get("languages_studied") or []:
+        name = language_names.canonical(raw)
+        if not name or name.lower() in ignore:
             continue
         mapped = find(config, name)
         if mapped:
@@ -103,7 +105,7 @@ def group_papers(config: Config, papers: list[dict]) -> dict[str, LanguagePage]:
             pages[lid].papers.append(paper)
         for name in extra:
             key = slug(name)
-            page = auto.setdefault(key, LanguagePage(key, name, name, "other"))
+            page = auto.setdefault(key, LanguagePage(key, language_names.indonesian(name), name, "other"))
             if paper not in page.papers:
                 page.papers.append(paper)
                 paper["languages"].append(key)

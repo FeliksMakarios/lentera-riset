@@ -60,7 +60,7 @@ class AskBuildTest(unittest.TestCase):
         html = (self.build(WORKER) / "papers/2609.01234.html").read_text()
         self.assertIn('<aside class="ask-panel" id="tanya" data-paper="2609.01234"', html)
         self.assertIn('<div class="paper-layout" id="paper-layout" data-ask="open">', html)
-        self.assertIn('<main class="wrap wrap-wide">', html)
+        self.assertIn('<main class="wrap wrap-wide" id="main">', html)
         self.assertIn('class="ask-fab" id="ask-open"', html)
         self.assertIn('id="ask-resize" role="separator"', html)
         self.assertLess(html.index('src="../assets/paper.js"'), html.index('src="../assets/ask.js"'))

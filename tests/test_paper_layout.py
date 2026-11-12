@@ -27,7 +27,7 @@ class SummaryLayoutTest(unittest.TestCase):
 
     def test_language_switch_defaults_to_indonesian(self):
         html = build.paper_body(CONFIG, self.paper)
-        self.assertIn('<article class="paper" data-summary-lang="id">', html)
+        self.assertIn('<article class="paper">', html)
         self.assertIn('data-set-lang="id" aria-pressed="true"', html)
         self.assertIn('data-set-lang="en" aria-pressed="false"', html)
         # TL;DR ikut pilihan bahasa yang sama.

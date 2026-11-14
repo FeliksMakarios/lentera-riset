@@ -120,12 +120,15 @@ a:hover { text-decoration-thickness: 2px; }
 
 /* Bilah samping yang diciutkan (hanya ikon), pilihan disimpan app.js */
 @media (min-width: 900px) {
-  .side-collapsed { --side-w: 72px; }
-  .side-collapsed .side-label { display: none; }
-  .side-collapsed .side-top { flex-direction: column; gap: 10px; padding: 2px 0 14px; }
-  .side-collapsed .side-link { justify-content: center; padding: 10px 0; }
-  .side-collapsed .sidebar .lang-switch { flex-direction: column; margin: 0 auto; align-self: center; border-radius: 12px; }
+  .side-collapsed, body.ask-squeeze { --side-w: 72px; }
+  .side-collapsed .side-label, body.ask-squeeze .side-label { display: none; }
+  .side-collapsed .side-top, body.ask-squeeze .side-top { flex-direction: column; gap: 10px; padding: 2px 0 14px; }
+  .side-collapsed .side-link, body.ask-squeeze .side-link { justify-content: center; padding: 10px 0; }
+  .side-collapsed .sidebar .lang-switch, body.ask-squeeze .sidebar .lang-switch { flex-direction: column; margin: 0 auto; align-self: center; border-radius: 12px; }
   .side-collapsed .side-btn svg { transform: scaleX(-1); }
+  /* Panel tanya jawab terbuka di layar sedang: bilah samping otomatis menjadi ikon saja
+     (tanpa mengubah pilihan pembaca), supaya halaman makalah dan panel muat berdampingan. */
+  body.ask-squeeze #side-collapse { display: none; }
 }
 
 /* Ponsel dan tablet kecil: bilah samping menjadi laci dari kiri */
@@ -235,7 +238,9 @@ a:hover { text-decoration-thickness: 2px; }
 /* Halaman makalah. Lebar teks dibatasi supaya satu baris tidak lebih dari sekitar 85 karakter. */
 .back { margin: 24px 0 8px; font-size: 0.9rem; }
 .paper { max-width: 44rem; }
-.paper-layout > .paper { margin-inline: auto; }
+/* Di dalam grid, margin otomatis membuat artikel selebar isinya dan bisa melewati kolomnya;
+   jadi lebarnya diisi penuh lalu dibatasi max-width dan diletakkan di tengah kolom. */
+.paper-layout > .paper { width: 100%; justify-self: center; }
 .back + .paper { margin-inline: auto; }
 .paper h1 { font-family: var(--serif); font-size: clamp(1.5rem, 3.5vw, 2rem); line-height: 1.25; margin: 8px 0; }
 .paper h2 { font-size: 1.15rem; margin: 32px 0 10px; }
@@ -435,7 +440,7 @@ a.chip:hover { text-decoration: underline; }
 .wrap-wide { max-width: 1480px; }
 :root { --ask-w: 420px; }
 .paper-layout > .paper { min-width: 0; }
-@media (min-width: 1280px) {
+@media (min-width: 900px) {
   .paper-layout { display: grid; grid-template-columns: minmax(0, 1fr) var(--ask-w); gap: 0 28px; align-items: start; }
   .paper-layout[data-ask="closed"] { grid-template-columns: minmax(0, 1fr); }
   .paper-layout[data-ask="closed"] .ask-panel { display: none; }
@@ -521,7 +526,7 @@ body.ask-resizing { cursor: col-resize; user-select: none; }
 .quote-pop[hidden] { display: none; }
 
 /* Layar kecil: panel muncul dari bawah */
-@media (max-width: 1279px) {
+@media (max-width: 899px) {
   .ask-panel {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; height: 85vh; height: 85dvh;
     border-bottom: 0; border-radius: 16px 16px 0 0; box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);

@@ -37,7 +37,7 @@
   var MAX_QUOTE = 600;
   var MIN_WIDTH = 320;
   var DEFAULT_WIDTH = 420;
-  var wide = window.matchMedia("(min-width: 1100px)");
+  var wide = window.matchMedia("(min-width: 1280px)");
   var busy = false;
   var quote = "";
 

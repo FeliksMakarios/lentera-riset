@@ -196,19 +196,46 @@ SEARCH_ICON = (
     '<svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
 )
-MENU_ICON = (
-    '<svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" '
-    'stroke-width="2" stroke-linecap="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>'
-)
-NAV = [("beranda", "index.html", "Beranda"), ("makalah", "makalah.html", "Makalah"),
-       ("tentang", "tentang.html", "Tentang"), ("rss", "feed.xml", "RSS")]
 
-# Dijalankan sebelum halaman digambar: menandai bahwa JavaScript aktif dan memasang
-# bahasa ringkasan pilihan pembaca, supaya tidak ada kedipan bahasa yang salah.
+
+def svg(paths: str, size: int = 18) -> str:
+    return (f'<svg aria-hidden="true" viewBox="0 0 24 24" width="{size}" height="{size}" fill="none" '
+            f'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{paths}</svg>')
+
+
+MENU_ICON = svg('<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>', 20)
+COLLAPSE_ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m15 10-2 2 2 2"/>')
+THEME_ICON = svg('<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4'
+                 'M5.6 18.4 7 17M17 7l1.4-1.4"/>')
+NAV = [
+    ("beranda", "index.html", "Beranda", svg('<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>')),
+    ("makalah", "makalah.html", "Makalah", svg('<path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>')),
+    ("cari", "cari.html", "Cari", svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>')),
+    ("tentang", "tentang.html", "Tentang", svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>')),
+    ("rss", "feed.xml", "RSS", svg('<path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="6" cy="18" r="1"/>')),
+]
+
+# Contoh pertanyaan yang bergantian di kolom cari besar (static/app.js).
+SEARCH_EXAMPLES = [
+    "Korpus paralel bahasa Batak Toba untuk terjemahan mesin",
+    "Pengenalan ucapan bahasa Jawa dan Sunda",
+    "Analisis sentimen bahasa daerah dengan IndoBERT",
+    "Model bahasa besar untuk bahasa Austronesia",
+    "Deteksi ujaran kebencian berbahasa Indonesia",
+    "Benchmark NLP untuk bahasa Asia Tenggara",
+]
+
+# Dijalankan sebelum halaman digambar: menandai bahwa JavaScript aktif, lalu memasang tema,
+# bahasa ringkasan, dan keadaan bilah samping pilihan pembaca, supaya tidak ada kedipan.
 HEAD_SCRIPT = (
-    '<script>(function(d){d.classList.add("js");try{var l=localStorage.getItem("lentera:bahasa-ringkasan");'
-    'if(l==="id"||l==="en")d.setAttribute("data-ringkasan",l)}catch(e){}})(document.documentElement)</script>'
+    '<script>(function(d){d.classList.add("js");try{var s=localStorage,l=s.getItem("lentera:bahasa-ringkasan"),'
+    't=s.getItem("lentera:tema");if(l==="id"||l==="en")d.setAttribute("data-ringkasan",l);'
+    'if(t==="light"||t==="dark")d.setAttribute("data-theme",t);'
+    'if(s.getItem("lentera:samping")==="ciut")d.classList.add("side-collapsed")}catch(e){}})(document.documentElement)</script>'
 )
+FAVICON = ("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' "
+           "r='13' fill='%231F3A4A'/%3E%3Ccircle cx='16' cy='15' r='6' fill='%23E8A33D'/%3E%3Ccircle cx='16' cy='14' r='2.5' "
+           "fill='%23FDF3DC'/%3E%3C/svg%3E")
 
 
 def lang_switch(compact: bool = False) -> str:
@@ -225,19 +252,34 @@ def site_base(config: Config) -> str:
     return (config.site.get("site_url") or "").rstrip("/")
 
 
+def search_form(root: str, query: str = "", big: bool = False) -> str:
+    """Kolom cari berbentuk pil. Di Beranda dan halaman Cari ukurannya besar dan contoh
+    pertanyaannya bergantian."""
+    cls = "site-search site-search-big" if big else "site-search"
+    examples = esc(json.dumps(SEARCH_EXAMPLES, ensure_ascii=False)) if big else ""
+    data = f' data-examples="{examples}"' if big else ""
+    return f"""<form class="{cls}" id="site-search" action="{root}cari.html" method="get" role="search">
+      <label class="sr-only" for="site-q">Cari makalah berdasarkan makna</label>
+      <input id="site-q" name="q" type="search" value="{esc(query)}" placeholder="Cari makalah berdasarkan makna..." autocomplete="off" required{data}>
+      <button type="submit" aria-label="Cari">{SEARCH_ICON}</button>
+    </form>"""
+
+
 def page(title: str, body: str, *, root: str, config: Config, updated_at: str | None, description: str = "",
          scripts: tuple[str, ...] = (), active: str = "", query: str = "", worker_url: str = "",
          wide: bool = False, path: str | None = None, og_type: str = "website", head_extra: str = "",
-         search_open: bool = False) -> str:
+         big_search: bool = False, ask: bool = False) -> str:
     site = config.site
     extra_scripts = "".join(f'\n<script src="{root}assets/{name}" defer></script>' for name in scripts)
     desc = description or site.get("tagline", "")
     updated = f"Data diperbarui {date_id(updated_at)}." if updated_at else ""
     current = ' aria-current="page"'
     wrap = "wrap wrap-wide" if wide else "wrap"
+    name = esc(site.get("title", "Lentera Riset"))
     nav = "".join(
-        f'<a href="{root}{href}"{current if key == active else ""}>{label}</a>'
-        for key, href, label in NAV
+        f'<a class="side-link" href="{root}{href}"{current if key == active else ""} title="{label}">'
+        f'{icon_svg}<span class="side-label">{label}</span></a>'
+        for key, href, label, icon_svg in NAV
     )
     base = site_base(config)
     meta = ""
@@ -245,14 +287,14 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
         url = f"{base}/{path}" if path else f"{base}/"
         meta = (f'<link rel="canonical" href="{esc(url)}">\n'
                 f'<meta property="og:url" content="{esc(url)}">\n')
-    meta += (f'<meta property="og:site_name" content="{esc(site.get("title", "Lentera Riset"))}">\n'
+    meta += (f'<meta property="og:site_name" content="{name}">\n'
              f'<meta property="og:title" content="{esc(title)}">\n'
              f'<meta property="og:description" content="{esc(desc)}">\n'
              f'<meta property="og:type" content="{og_type}">\n'
              '<meta property="og:locale" content="id_ID">\n'
              '<meta name="twitter:card" content="summary">\n'
-             '<meta name="theme-color" content="#b45309">')
-    header_cls = "site-header search-open" if search_open else "site-header"
+             '<meta name="theme-color" content="#1F3A4A">')
+    ask_attr = ' data-ask="1"' if ask else ""
     return f"""<!doctype html>
 <html lang="id" data-ringkasan="id">
 <head>
@@ -263,37 +305,44 @@ def page(title: str, body: str, *, root: str, config: Config, updated_at: str | 
 {meta}
 {HEAD_SCRIPT}
 <link rel="stylesheet" href="{root}assets/style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%23b45309'/%3E%3Ccircle cx='16' cy='14' r='5' fill='%23fde68a'/%3E%3C/svg%3E">
-<link rel="alternate" type="application/rss+xml" title="{esc(site.get('title', ''))}" href="{root}feed.xml">{head_extra}
+<link rel="icon" href="{FAVICON}">
+<link rel="alternate" type="application/rss+xml" title="{name}" href="{root}feed.xml">{head_extra}
 </head>
-<body data-root="{root}" data-worker="{esc(worker_url)}">
-<header class="{header_cls}" id="site-header">
-  <div class="{wrap} header-inner">
-    <a class="brand" href="{root}index.html"><span class="brand-mark" aria-hidden="true"></span>{esc(site.get('title', 'Lentera Riset'))}</a>
-    <div class="header-tools">
-      <button type="button" class="header-btn" id="search-toggle" aria-controls="site-search" aria-expanded="{'true' if search_open else 'false'}" aria-label="Buka pencarian">{SEARCH_ICON}</button>
-      <button type="button" class="header-btn" id="menu-toggle" aria-controls="site-menu" aria-expanded="false" aria-label="Buka menu">{MENU_ICON}</button>
-    </div>
-    <form class="site-search" id="site-search" action="{root}cari.html" method="get" role="search">
-      <label class="sr-only" for="site-q">Cari makalah berdasarkan makna</label>
-      <input id="site-q" name="q" type="search" value="{esc(query)}" placeholder="Cari makalah berdasarkan makna..." autocomplete="off" required>
-      <button type="submit" aria-label="Cari">{SEARCH_ICON}</button>
-    </form>
-    <div class="site-menu" id="site-menu">
-      <nav aria-label="Menu utama">{nav}</nav>
-      {lang_switch(compact=True)}
-    </div>
+<body data-root="{root}" data-worker="{esc(worker_url)}"{ask_attr}>
+<a class="skip-link" href="#main">Langsung ke isi</a>
+<div class="app">
+<aside class="sidebar" id="sidebar" aria-label="Navigasi situs">
+  <div class="side-top">
+    <a class="brand" href="{root}index.html"><span class="brand-mark" aria-hidden="true"></span><span class="side-label">{name}</span></a>
+    <button type="button" class="side-btn" id="side-collapse" aria-controls="sidebar" aria-expanded="true" aria-label="Ciutkan bilah samping" title="Ciutkan bilah samping">{COLLAPSE_ICON}</button>
   </div>
-</header>
-<main class="{wrap}" id="main">
+  <nav aria-label="Menu utama">{nav}</nav>
+  <div class="side-bottom">
+    <span class="side-caption side-label">Bahasa ringkasan</span>
+    {lang_switch(compact=True)}
+    <button type="button" class="side-link" id="theme-toggle" title="Ganti tema">{THEME_ICON}<span class="side-label" id="theme-label">Tema: otomatis</span></button>
+  </div>
+</aside>
+<div class="side-scrim" id="side-scrim" hidden></div>
+<div class="app-main">
+  <header class="mobile-bar">
+    <a class="brand" href="{root}index.html"><span class="brand-mark" aria-hidden="true"></span>{name}</a>
+    <button type="button" class="mobile-menu" id="menu-toggle" aria-controls="sidebar" aria-expanded="false" aria-label="Buka menu">{MENU_ICON}</button>
+  </header>
+  <div class="{wrap} search-row{' search-row-big' if big_search else ''}">
+    {search_form(root, query, big_search)}
+  </div>
+  <main class="{wrap}" id="main">
 {body}
-</main>
-<footer class="site-footer">
-  <div class="{wrap}">
-    <p>{updated} Metadata makalah dari <a href="https://arxiv.org">arXiv</a>, <a href="https://aclanthology.org">ACL Anthology</a>, dan <a href="https://openalex.org">OpenAlex</a>. Thank you to arXiv for use of its open access interoperability.</p>
-    <p>Ringkasan dibuat otomatis oleh model bahasa dan bisa keliru. Selalu periksa makalah aslinya. <a href="{esc(site.get('repo_url', '#'))}">Kode sumber</a>.</p>
-  </div>
-</footer>
+  </main>
+  <footer class="site-footer">
+    <div class="{wrap}">
+      <p>{updated} Metadata makalah dari <a href="https://arxiv.org">arXiv</a>, <a href="https://aclanthology.org">ACL Anthology</a>, dan <a href="https://openalex.org">OpenAlex</a>. Thank you to arXiv for use of its open access interoperability.</p>
+      <p>Ringkasan dibuat otomatis oleh model bahasa dan bisa keliru. Selalu periksa makalah aslinya. <a href="{esc(site.get('repo_url', '#'))}">Kode sumber</a>.</p>
+    </div>
+  </footer>
+</div>
+</div>
 <script src="{root}assets/app.js" defer></script>{extra_scripts}
 </body>
 </html>
@@ -379,7 +428,7 @@ def source_span(paper: dict) -> str:
 NEW_BADGE = '<span class="badge-new">Baru</span>'
 
 
-def card(config: Config, paper: dict, root: str = "", rank: int | None = None) -> str:
+def card(config: Config, paper: dict, root: str = "", rank: int | None = None, ask: bool = False) -> str:
     """Kartu makalah. Bentuknya sama dengan kartu yang dibuat assets/app.js."""
     pair = tldr_pair(paper.get("summary"))
     if pair:
@@ -391,17 +440,20 @@ def card(config: Config, paper: dict, root: str = "", rank: int | None = None) -
         tldr = f'<p class="tldr tldr-pending" lang="en">{esc(snippet(paper))}</p>'
     badge = f'<span class="rank" aria-label="Peringkat {rank}">{rank}</span>' if rank else ""
     new = NEW_BADGE if paper.get("_new") else ""
+    href = f"{root}papers/{slug(paper['id'])}.html"
+    cta = f'<a class="btn btn-accent" href="{href}#tanya">Tanya makalah</a>' if ask else ""
+    signals = "".join(f"<span><b>{esc(label)}</b> {esc(value)}</span>" for label, value, _ in signal_items(paper))
     return f"""<article class="card">
   <div class="card-meta">{badge}{new}<time datetime="{esc(paper['published'])}">{date_id(paper['published'])}</time>{source_span(paper)}{topic_chips(config, paper, root)}</div>
-  <h2><a href="{root}papers/{slug(paper['id'])}.html">{esc(paper['title'])}</a></h2>
+  <h2><a href="{href}">{esc(paper['title'])}</a></h2>
   <p class="authors">{esc(authors_short(paper['authors']))}</p>
   {tldr}
-  {signals_inline(paper)}
+  <div class="card-actions">{cta}<a class="btn" href="{href}#kutip">Kutip</a><button type="button" class="btn share-btn" data-href="{href}" hidden>Bagikan</button><span class="signals">{signals}</span></div>
 </article>"""
 
 
 def home_body(config: Config, trending: list[dict], newest: list[dict], newest_total: int,
-              stats: dict | None = None) -> str:
+              stats: dict | None = None, ask: bool = False) -> str:
     per_page = int(config.site.get("newest_per_page", 7))
     stats = stats or {}
     facts = []
@@ -412,23 +464,31 @@ def home_body(config: Config, trending: list[dict], newest: list[dict], newest_t
     facts.append(f"{newest_total} makalah")
     if stats.get("languages"):
         facts.append(f'{stats["languages"]} bahasa')
-    facts.append("arXiv, ACL Anthology, dan OpenAlex")
     facts_html = '<p class="home-facts">' + '<span class="dot" aria-hidden="true"> · </span>'.join(facts) + "</p>"
-    trending_cards = "\n".join(card(config, p, rank=i) for i, p in enumerate(trending, 1))
-    newest_cards = "\n".join(card(config, p) for p in newest[:per_page])
+    trending_cards = "\n".join(card(config, p, rank=i, ask=ask) for i, p in enumerate(trending, 1))
+    newest_cards = "\n".join(card(config, p, ask=ask) for p in newest[:per_page])
     pages = max(1, -(-newest_total // per_page))
     empty = '<p class="empty">Belum ada makalah. Data akan muncul setelah alur kerja harian berjalan.</p>'
+    topics = "".join(
+        f'<a href="{filter_link("", "topik", t.id)}">{esc(t.label_id)}</a>' for t in config.topics
+    )
     return f"""<section class="intro">
-  <h1>{esc(config.site.get('title', 'Lentera Riset'))}</h1>
-  <p>{esc(config.site.get('tagline', ''))}</p>
+  <h1 class="sr-only">{esc(config.site.get('title', 'Lentera Riset'))}</h1>
+  <p class="tagline">{esc(config.site.get('tagline', ''))}</p>
   {facts_html}
 </section>
-<div class="tabs" role="tablist" aria-label="Urutan makalah">
-  <button type="button" role="tab" class="tab" id="tab-trending" aria-controls="panel-trending" aria-selected="true">Sedang ramai</button>
-  <button type="button" role="tab" class="tab" id="tab-newest" aria-controls="panel-newest" aria-selected="false">Terbaru</button>
+<div class="feed-bar">
+  <div class="tabs" role="tablist" aria-label="Urutan makalah">
+    <button type="button" role="tab" class="tab" id="tab-trending" aria-controls="panel-trending" aria-selected="true">Sedang ramai</button>
+    <button type="button" role="tab" class="tab" id="tab-newest" aria-controls="panel-newest" aria-selected="false">Terbaru</button>
+  </div>
+  <details class="topic-menu">
+    <summary class="tab">Topik</summary>
+    <div class="menu-pop">{topics}<a href="makalah.html">Semua makalah per tugas dan bahasa</a></div>
+  </details>
 </div>
 <section id="panel-trending" role="tabpanel" aria-labelledby="tab-trending">
-  <p class="result-count">{len(trending)} makalah teramai saat ini, menurut relevansi, sinyal keramaian, dan kebaruan. Diperbarui setiap hari.</p>
+  <p class="result-count">{len(trending)} makalah teramai saat ini, menurut relevansi, sinyal keramaian, dan kebaruan.</p>
   <div class="paper-list">{trending_cards or empty}</div>
 </section>
 <section id="panel-newest" role="tabpanel" aria-labelledby="tab-newest" hidden data-per-page="{per_page}">
@@ -436,7 +496,7 @@ def home_body(config: Config, trending: list[dict], newest: list[dict], newest_t
   <div class="paper-list" id="newest-list">{newest_cards or empty}</div>
   <nav class="pager" id="newest-pager" aria-label="Halaman" data-pages="{pages}"></nav>
 </section>
-<p class="more"><a class="button" href="makalah.html">Jelajahi semua makalah per tugas, topik, dan bahasa</a></p>"""
+<p class="more"><a class="btn" href="makalah.html">Jelajahi semua makalah per tugas, topik, dan bahasa</a></p>"""
 
 
 def catalog_body(config: Config, total: int) -> str:
@@ -1166,12 +1226,14 @@ def build_site(config: Config, out: Path, data: dict | None = None, vectors: dic
         )
 
     stats = {"updated_at": updated_at, "new": sum(1 for p in relevant if p["_new"]), "languages": len(lang_pages)}
-    write("index.html", title, home_body(config, trending, newest, len(newest), stats), "", active="beranda", path="")
+    ask = bool(worker_url)
+    write("index.html", title, home_body(config, trending, newest, len(newest), stats, ask), "", active="beranda",
+          path="", big_search=True, ask=ask)
     write("makalah.html", f"Makalah | {title}", catalog_body(config, len(relevant)), "",
-          active="makalah", scripts=("catalog.js",), path="makalah.html")
+          active="makalah", scripts=("catalog.js",), path="makalah.html", ask=bool(worker_url))
     write("cari.html", f"Cari | {title}", search_body(config), "", scripts=("search.js",), worker_url=worker_url,
-          path=None, search_open=True)
-    write("tentang.html", f"Tentang | {title}", about_body(config), "", active="tentang", path="tentang.html")
+          path=None, big_search=True, active="cari", ask=ask)
+    write("tentang.html", f"Tentang | {title}", about_body(config), "", active="tentang", path="tentang.html", ask=ask)
     # Halaman 404 dilayani GitHub Pages dari alamat mana pun di bawah situs, jadi tautannya absolut.
     base_path = urlparse(site_base(config)).path.rstrip("/") + "/"
     write("404.html", f"Halaman tidak ditemukan | {title}", not_found_body(config, base_path), base_path, path=None)
@@ -1186,7 +1248,7 @@ def build_site(config: Config, out: Path, data: dict | None = None, vectors: dic
         write(path, f"{paper['title']} | {title}",
               paper_body(config, paper, lang_pages, near, ask=ask), "../", description=strip_marks(desc),
               scripts=("paper.js", "ask.js") if ask else ("paper.js",), worker_url=worker_url, wide=ask,
-              path=path, og_type="article", head_extra=citation_meta(paper, url))
+              path=path, og_type="article", head_extra=citation_meta(paper, url), ask=ask)
         write_json(out / "qa" / f"{slug(paper['id'])}.json", qa_data(paper))
 
     write_json(out / "catalog.json", catalog_data(config, relevant, lang_pages))

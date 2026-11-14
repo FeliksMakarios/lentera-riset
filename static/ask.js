@@ -35,9 +35,11 @@
   var KEY = "lentera:ask:" + paper;
   var HISTORY_SENT = 6;
   var MAX_QUOTE = 600;
-  var MIN_WIDTH = 320;
-  var DEFAULT_WIDTH = 420;
-  var wide = window.matchMedia("(min-width: 1280px)");
+  var MIN_WIDTH = 300;
+  var ROOMY = 1280;
+  // Lebar bawaan panel: lebih sempit di layar sedang supaya isi makalah tetap lega.
+  function defaultWidth() { return window.innerWidth < ROOMY ? 360 : 420; }
+  var wide = window.matchMedia("(min-width: 900px)");
   var busy = false;
   var quote = "";
 
@@ -256,8 +258,18 @@
     openBtn.setAttribute("aria-expanded", open ? "true" : "false");
     document.body.classList.toggle("ask-sheet-open", open && !wide.matches);
     document.body.classList.toggle("ask-docked", open && wide.matches);
+    squeeze();
     if (byUser && wide.matches) L.remember("panel-tanya", open ? "buka" : "tutup");
     place();
+  }
+
+  // Layar sedang (900 sampai 1279 px): saat panel terbuka, bilah samping diciutkan
+  // sementara menjadi ikon saja agar halaman makalah dan panel muat berdampingan.
+  function squeeze() {
+    var on = isOpen() && wide.matches && window.innerWidth < ROOMY;
+    if (document.body.classList.contains("ask-squeeze") === on) return;
+    document.body.classList.toggle("ask-squeeze", on);
+    requestAnimationFrame(function () { setWidth(askWidth, false); });
   }
 
   function openAndFocus() {
@@ -291,7 +303,7 @@
 
   // Di layar lebar panel dipasang tetap di layar, sejajar kolom kanan tata letak. Tepi
   // atasnya tidak naik melewati awal tata letak, supaya kepala halaman tidak tertutup.
-  var askWidth = DEFAULT_WIDTH;
+  var askWidth = defaultWidth();
   var placeQueued = false;
   function place() {
     placeQueued = false;
@@ -307,6 +319,7 @@
   }
   window.addEventListener("scroll", queuePlace, { passive: true });
   window.addEventListener("resize", function () {
+    squeeze();
     setWidth(askWidth, false);
     queuePlace();
   });
@@ -329,8 +342,8 @@
 
   resize.setAttribute("aria-valuemin", String(MIN_WIDTH));
   resize.setAttribute("aria-valuemax", "760");
-  resize.setAttribute("aria-valuenow", String(DEFAULT_WIDTH));
-  setWidth(parseInt(L.recall("lebar-panel-tanya"), 10) || DEFAULT_WIDTH, false);
+  resize.setAttribute("aria-valuenow", String(askWidth));
+  setWidth(parseInt(L.recall("lebar-panel-tanya"), 10) || defaultWidth(), false);
 
   resize.addEventListener("pointerdown", function (e) {
     if (!wide.matches) return;
@@ -352,7 +365,7 @@
   });
   resize.addEventListener("dblclick", function () {
     L.remember("lebar-panel-tanya", "");
-    setWidth(DEFAULT_WIDTH, false);
+    setWidth(defaultWidth(), false);
   });
   resize.addEventListener("keydown", function (e) {
     var step = e.shiftKey ? 80 : 24;

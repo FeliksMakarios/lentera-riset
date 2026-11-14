@@ -121,6 +121,21 @@
       pending.lang = "en";
       card.appendChild(pending);
     }
+    var actions = el("div", "card-actions");
+    var href = paperUrl(p.id);
+    if (body.dataset.ask) {
+      var askLink = el("a", "btn btn-accent", "Tanya makalah");
+      askLink.href = href + "#tanya";
+      actions.appendChild(askLink);
+    }
+    var cite = el("a", "btn", "Kutip");
+    cite.href = href + "#kutip";
+    actions.appendChild(cite);
+    var share = el("button", "btn share-btn", "Bagikan");
+    share.type = "button";
+    share.dataset.href = href;
+    actions.appendChild(share);
+    card.appendChild(actions);
     return card;
   }
 
@@ -194,34 +209,132 @@
   };
 
   // ---------------------------------------------------------------------------
-  // Kepala halaman di ponsel: tombol cari dan tombol menu.
+  // Bilah samping: diciutkan di layar lebar, laci dari kiri di ponsel.
   // ---------------------------------------------------------------------------
-  var header = document.getElementById("site-header");
-  var searchToggle = document.getElementById("search-toggle");
-  var menuToggle = document.getElementById("menu-toggle");
-  function toggle(cls, button, open) {
-    header.classList.toggle(cls, open);
-    button.setAttribute("aria-expanded", open ? "true" : "false");
+  var sidebar = document.getElementById("sidebar");
+  var collapseBtn = document.getElementById("side-collapse");
+  var menuBtn = document.getElementById("menu-toggle");
+  var scrim = document.getElementById("side-scrim");
+  var desktop = window.matchMedia("(min-width: 900px)");
+
+  function setDrawer(open) {
+    if (!sidebar) return;
+    sidebar.classList.toggle("open", open);
+    if (scrim) scrim.hidden = !open;
+    body.classList.toggle("side-open", open);
+    if (menuBtn) menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      var first = sidebar.querySelector(".side-link");
+      if (first) first.focus();
+    } else if (menuBtn && !desktop.matches) {
+      menuBtn.focus();
+    }
   }
-  if (header && searchToggle && menuToggle) {
-    searchToggle.addEventListener("click", function () {
-      var open = !header.classList.contains("search-open");
-      toggle("search-open", searchToggle, open);
-      toggle("menu-open", menuToggle, false);
-      if (open) document.getElementById("site-q").focus();
-    });
-    menuToggle.addEventListener("click", function () {
-      var open = !header.classList.contains("menu-open");
-      toggle("menu-open", menuToggle, open);
-      menuToggle.setAttribute("aria-label", open ? "Tutup menu" : "Buka menu");
-    });
+  function syncCollapse() {
+    if (!collapseBtn) return;
+    if (!desktop.matches) {
+      collapseBtn.setAttribute("aria-label", "Tutup menu");
+      collapseBtn.title = "Tutup menu";
+      return;
+    }
+    var collapsed = html.classList.contains("side-collapsed");
+    collapseBtn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    collapseBtn.setAttribute("aria-label", collapsed ? "Lebarkan bilah samping" : "Ciutkan bilah samping");
+    collapseBtn.title = collapseBtn.getAttribute("aria-label");
+  }
+  if (sidebar) {
+    if (collapseBtn) {
+      collapseBtn.addEventListener("click", function () {
+        if (!desktop.matches) { setDrawer(false); return; }
+        var collapsed = html.classList.toggle("side-collapsed");
+        remember("samping", collapsed ? "ciut" : "lebar");
+        syncCollapse();
+      });
+    }
+    if (menuBtn) menuBtn.addEventListener("click", function () { setDrawer(!sidebar.classList.contains("open")); });
+    if (scrim) scrim.addEventListener("click", function () { setDrawer(false); });
     document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape" && header.classList.contains("menu-open")) {
-        toggle("menu-open", menuToggle, false);
-        menuToggle.focus();
-      }
+      if (e.key === "Escape" && sidebar.classList.contains("open")) setDrawer(false);
+    });
+    var onChange = function () { setDrawer(false); syncCollapse(); };
+    if (desktop.addEventListener) desktop.addEventListener("change", onChange);
+    else if (desktop.addListener) desktop.addListener(onChange);
+    syncCollapse();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tema: otomatis (mengikuti sistem), terang, atau gelap.
+  // ---------------------------------------------------------------------------
+  var THEMES = ["auto", "light", "dark"];
+  var THEME_NAMES = { auto: "otomatis", light: "terang", dark: "gelap" };
+  var themeBtn = document.getElementById("theme-toggle");
+  var themeLabel = document.getElementById("theme-label");
+  function currentTheme() {
+    var t = html.getAttribute("data-theme");
+    return t === "light" || t === "dark" ? t : "auto";
+  }
+  function showTheme() {
+    var name = "Tema: " + THEME_NAMES[currentTheme()];
+    if (themeLabel) themeLabel.textContent = name;
+    if (themeBtn) themeBtn.title = name + " (klik untuk mengganti)";
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener("click", function () {
+      var next = THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length];
+      if (next === "auto") html.removeAttribute("data-theme");
+      else html.setAttribute("data-theme", next);
+      remember("tema", next);
+      showTheme();
+    });
+    showTheme();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Kolom cari besar: contoh pertanyaan bergantian selama kolom kosong.
+  // ---------------------------------------------------------------------------
+  var searchInput = document.getElementById("site-q");
+  var examples = [];
+  try { examples = JSON.parse((searchInput && searchInput.dataset.examples) || "[]"); } catch (e) { examples = []; }
+  var calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (searchInput && examples.length) {
+    var turn = 0;
+    var showExample = function () {
+      searchInput.placeholder = "Coba: " + examples[turn % examples.length];
+      turn += 1;
+    };
+    showExample();
+    if (!calm) {
+      setInterval(function () {
+        if (document.activeElement !== searchInput && !searchInput.value) showExample();
+      }, 4000);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tombol "Bagikan" di kartu: lembar bagikan bawaan perangkat, atau salin tautan.
+  // ---------------------------------------------------------------------------
+  function absolute(href) {
+    try { return new URL(href, location.href).href; } catch (e) { return href; }
+  }
+  function prepareShare(scope) {
+    Array.prototype.forEach.call((scope || document).querySelectorAll(".share-btn[hidden]"), function (b) {
+      b.hidden = false;
     });
   }
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest(".share-btn") : null;
+    if (!btn) return;
+    var url = absolute(btn.dataset.href);
+    var card = btn.closest(".card");
+    var title = card && card.querySelector("h2") ? card.querySelector("h2").textContent : document.title;
+    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
+      navigator.share({ title: title, url: url }).catch(function () { /* dibatalkan */ });
+    } else {
+      copyText(url, btn);
+    }
+  });
+  prepareShare();
+  window.Lentera.prepareShare = prepareShare;
 
   // ---------------------------------------------------------------------------
   // Beranda: tab "Sedang ramai" dan "Terbaru" (beberapa makalah per halaman).

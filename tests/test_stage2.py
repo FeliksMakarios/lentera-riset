@@ -231,14 +231,34 @@ class Stage2BuildTest(unittest.TestCase):
         self.assertEqual(set(data["vectors"]), {"2609.01234", "2609.09999"})
         self.assertEqual(len(base64.b64decode(data["vectors"]["2609.01234"])), 256)
 
-    def test_header_has_search_and_four_menu_items(self):
+    def test_sidebar_menu_and_search_pill(self):
         html = (self.out / "index.html").read_text()
-        self.assertIn('<form class="site-search" id="site-search" action="cari.html"', html)
+        # Beranda memakai kolom cari besar dengan contoh pertanyaan yang bergantian.
+        self.assertIn('<form class="site-search site-search-big" id="site-search" action="cari.html"', html)
+        self.assertIn("data-examples=", html)
+        self.assertIn('<aside class="sidebar" id="sidebar"', html)
         nav = re.search(r'<nav aria-label="Menu utama">(.*?)</nav>', html).group(1)
-        self.assertEqual(re.findall(r">([^<]+)</a>", nav), ["Beranda", "Makalah", "Tentang", "RSS"])
+        self.assertEqual(re.findall(r'<span class="side-label">([^<]+)</span>', nav),
+                         ["Beranda", "Makalah", "Cari", "Tentang", "RSS"])
         self.assertIn('href="index.html" aria-current="page"', nav)
+        self.assertIn('id="theme-toggle"', html)
+        self.assertIn('id="menu-toggle" aria-controls="sidebar"', html)
         paper = (self.out / "papers/2609.01234.html").read_text()
-        self.assertIn('action="../cari.html"', paper)
+        self.assertIn('<form class="site-search" id="site-search" action="../cari.html"', paper)
+        self.assertNotIn("data-examples=", paper)
+
+    def test_cards_have_cite_and_share_actions(self):
+        html = (self.out / "index.html").read_text()
+        self.assertIn('<a class="btn" href="papers/2609.01234.html#kutip">Kutip</a>', html)
+        self.assertIn('class="btn share-btn" data-href="papers/2609.01234.html" hidden>Bagikan</button>', html)
+        # Tanpa Worker tidak ada tombol "Tanya makalah".
+        self.assertNotIn("btn-accent", html)
+        env_out = Path(tempfile.mkdtemp()) / "site"
+        with mock.patch.dict("os.environ", {"LENTERA_WORKER_URL": "https://w.example.workers.dev/"}):
+            build.build_site(CONFIG, env_out, {"updated_at": None, "papers": self.papers}, vectors={})
+        home = (env_out / "index.html").read_text()
+        self.assertIn('<a class="btn btn-accent" href="papers/2609.01234.html#tanya">Tanya makalah</a>', home)
+        self.assertIn('data-ask="1"', home)
 
     def test_home_trending_and_newest(self):
         config = copy.deepcopy(CONFIG)
